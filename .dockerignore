@@ -1,0 +1,12 @@
+.git
+.idea
+.vscode
+target
+build
+*.iml
+*.iws
+*.ipr
+.DS_Store
+.env
+docker-compose*.yml
+docker-compose*.yaml

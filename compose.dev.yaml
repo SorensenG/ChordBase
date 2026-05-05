@@ -1,0 +1,12 @@
+services:
+  api:
+    develop:
+      watch:
+        - action: rebuild
+          path: ./src
+        - action: rebuild
+          path: ./pom.xml
+        - action: rebuild
+          path: ./.mvn
+        - action: rebuild
+          path: ./mvnw
