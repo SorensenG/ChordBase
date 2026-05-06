@@ -1,4 +1,4 @@
-package com.chordbase;
+package com.chordbase.presentation.controller;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
