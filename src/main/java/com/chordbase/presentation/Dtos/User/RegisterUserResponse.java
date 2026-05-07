@@ -1,4 +1,10 @@
 package com.chordbase.presentation.Dtos.User;
 
-public record RegisterUserResponse(String email , String userName) {
+import com.chordbase.domain.valueobjects.UserRole;
+
+import java.util.List;
+import java.util.UUID;
+
+public record RegisterUserResponse(UUID uuid , String email , String userName, List<UserRole> roles) {
+
 }
