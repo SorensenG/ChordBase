@@ -5,9 +5,14 @@ import com.chordbase.domain.entities.User;
 import com.chordbase.domain.repository.UserRepository;
 import com.chordbase.infra.security.JwtTokenService;
 import com.chordbase.infra.security.SecurityConfiguration;
+import com.chordbase.infra.security.UserDetailsImp;
+import com.chordbase.presentation.Dtos.User.LoginRequest;
+import com.chordbase.presentation.Dtos.User.LoginResponse;
 import com.chordbase.presentation.Dtos.User.RegisterUserDtoRequest;
 import com.chordbase.presentation.Dtos.User.RegisterUserResponse;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -51,4 +56,25 @@ public class UserService {
     }
 
 
+    public LoginResponse userLogin(LoginRequest request) {
+
+        Optional<User> userOptional = userRepository.findByEmail(request.email());
+
+        if (userOptional.isEmpty()) {
+            throw new IllegalArgumentException("Invalid email or password");
+        }
+
+        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(request.email(), request.password());
+        Authentication authentication = authenticationManager.authenticate(authToken);
+
+        UserDetailsImp userDetails = (UserDetailsImp) authentication.getPrincipal();
+        if (userDetails == null) {
+            throw new IllegalArgumentException("Invalid email or password");
+        }
+        var token = jwtTokenService.generateToken(userDetails);
+
+        return new LoginResponse(userDetails.getUsername(), userDetails.getUser().getUuid(), userDetails.getUser().getRoles(), token);
+
+
+    }
 }
