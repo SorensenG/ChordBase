@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -29,35 +30,38 @@ public class UserAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         // Verifica se o endpoint requer autenticação antes de processar a requisição
         if (checkIfEndpointIsNotPublic(request)) {
-            String token = recoveryToken(request); // Recupera o token do cabeçalho Authorization da requisição
+            String token = recoveryToken(request);
             if (token != null) {
-                String subject = jwtTokenService.getSubjectFromToken(token); // Obtém o assunto (neste caso, o nome de usuário) do token
-                User user = userRepository.findByEmail(subject).get(); // Busca o usuário pelo email (que é o assunto do token)
-                UserDetailsImp userDetails = new UserDetailsImp(user); // Cria um UserDetails com o usuário encontrado
+                try {
+                    String subject = jwtTokenService.getSubjectFromAccessToken(token);
+                    User user = userRepository.findByEmail(subject)
+                            .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado."));
+                    UserDetailsImp userDetails = new UserDetailsImp(user);
 
-                // Cria um objeto de autenticação do Spring Security
-                Authentication authentication =
-                        new UsernamePasswordAuthenticationToken(userDetails.getUsername(), null, userDetails.getAuthorities());
+                    Authentication authentication =
+                            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
 
-                // Define o objeto de autenticação no contexto de segurança do Spring Security
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                } catch (RuntimeException exception) {
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token inválido ou expirado.");
+                    return;
+                }
             } else {
-                throw new RuntimeException("O token está ausente.");
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "O token está ausente.");
+                return;
             }
         }
-        filterChain.doFilter(request, response); // Continua o processamento da requisição
+        filterChain.doFilter(request, response);
     }
 
-    // Recupera o token do cabeçalho Authorization da requisição
     private String recoveryToken(HttpServletRequest request) {
         String authorizationHeader = request.getHeader("Authorization");
-        if (authorizationHeader != null) {
-            return authorizationHeader.replace("Bearer ", "");
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            return authorizationHeader.substring("Bearer ".length());
         }
         return null;
     }
 
-    // Verifica se o endpoint requer autenticação antes de processar a requisição
     private boolean checkIfEndpointIsNotPublic(HttpServletRequest request) {
         String requestURI = request.getRequestURI();
         return !Arrays.asList(SecurityConfiguration.ENDPOINTS_WITH_AUTHENTICATION_NOT_REQUIRED).contains(requestURI);
