@@ -22,6 +22,11 @@ public class Chord {
     private String artist;
 
     private String addByUser;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_user_uuid")
+    private User owner;
+
     @Column(columnDefinition = "text")
     private String chordPro;
 
