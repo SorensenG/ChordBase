@@ -10,8 +10,8 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -19,8 +19,6 @@ public class SecurityConfiguration {
 
     public static final String[] ENDPOINTS_WITH_AUTHENTICATION_NOT_REQUIRED = {"/users/login",
             "/users/register",
-            "/users/refresh",
-            "/users/logout",
             "/Teste"};
     //ex de sintaxe para proteger uma lista de rotas
 //    public static final String[] ENDPOINTS_WITH_AUTHENTICATION_REQUIRED = {""};
@@ -35,8 +33,8 @@ public class SecurityConfiguration {
 //                        .requestMatchers(ENDPOINTS_ADMIN).hasRole("ADMINISTRATOR") // Repare que não é necessário colocar "ROLE" antes do nome, como fizemos na definição das roles
 
                         .anyRequest().authenticated())
-                // Adiciona o filtro de autenticação de usuário que criamos, antes do filtro de segurança padrão do Spring Security
-                .addFilterBefore(userAuthenticationFilter, UsernamePasswordAuthenticationFilter.class).build();
+                // Adiciona o filtro de autenticação de usuário depois que o contexto de segurança foi preparado.
+                .addFilterAfter(userAuthenticationFilter, SecurityContextHolderFilter.class).build();
     }
 
     @Bean

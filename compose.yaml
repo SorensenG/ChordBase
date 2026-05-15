@@ -32,6 +32,7 @@ services:
       REFRESH_COOKIE_SECURE: ${REFRESH_COOKIE_SECURE:-false}
       REFRESH_COOKIE_SAME_SITE: ${REFRESH_COOKIE_SAME_SITE:-Lax}
       REFRESH_COOKIE_PATH: ${REFRESH_COOKIE_PATH:-/users}
+      CHORDPRO_EXTRACTOR_BASE_URL: ${CHORDPRO_EXTRACTOR_BASE_URL:-http://host.docker.internal:8000}
     ports:
       - "${APP_PORT:-8080}:8080"
     depends_on:
