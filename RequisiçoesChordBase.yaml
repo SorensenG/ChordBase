@@ -1,0 +1,835 @@
+type: collection.insomnia.rest/5.0
+schema_version: "5.1"
+name: RequisiçoesChordBase
+meta:
+  id: wrk_b4d8529ebdcc4f7589763dc30a96fd42
+  created: 1777984369894
+  modified: 1779126200000
+  description: "Colecao de rotas da API ChordBase"
+collection:
+  - name: Sistema
+    meta:
+      id: fld_sistema_001
+      created: 1779126200000
+      modified: 1779126200000
+      sortKey: -1779126200000
+    children:
+      - url: "{{ _.baseUrl }}/Teste"
+        name: Teste da API
+        meta:
+          id: req_5a96f22c88ed4193a99952fe8a6ba753
+          created: 1777984432057
+          modified: 1779126200000
+          isPrivate: false
+          description: "Rota publica para testar se a API esta respondendo."
+          sortKey: -1779126200000
+        method: GET
+        headers:
+          - name: User-Agent
+            value: insomnia/12.5.0
+            description: ""
+            disabled: false
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+  - name: Usuarios e Auth
+    meta:
+      id: fld_usuarios_auth_001
+      created: 1779126200000
+      modified: 1779126200000
+      sortKey: -1779126100000
+    children:
+      - url: "{{ _.baseUrl }}/users/register"
+        name: Registrar usuario
+        meta:
+          id: req_e92fb842c1c840fe9b9d8c769fd9ba7a
+          created: 1778113437901
+          modified: 1779126200000
+          isPrivate: false
+          description: "userName: 3-30 caracteres, letras/numeros/underscore/ponto, sem espaco. Salva em minusculo."
+          sortKey: -1779126190000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "userName": "gabriel.dev",
+              "email": "gabriel@test.com",
+              "password": "123456",
+              "role": "ROLE_USER",
+              "profileImageUrl": "https://example.com/avatar-gabriel.png"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: User-Agent
+            value: insomnia/12.5.0
+            description: ""
+            disabled: false
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.baseUrl }}/users/login"
+        name: Login
+        meta:
+          id: req_f5c4a926d0f7430ebab7e1954f249ff2
+          created: 1778205625064
+          modified: 1779126200000
+          isPrivate: false
+          description: "Retorna accessToken e refreshToken no body. Tambem salva refreshToken em cookie HTTP-only para web."
+          sortKey: -1779126180000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "email": "gabriel@test.com",
+              "password": "123456"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: User-Agent
+            value: insomnia/12.5.0
+            description: ""
+            disabled: false
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.baseUrl }}/users/refresh"
+        name: Renovar access token
+        meta:
+          id: req_ee936b93fb4d49048c3fc90cae23c10f
+          created: 1778638134380
+          modified: 1779126200000
+          isPrivate: false
+          description: "Rota publica. Flutter/mobile pode enviar refreshToken no body; web pode usar o refreshToken salvo em cookie. Retorna novos accessToken e refreshToken."
+          sortKey: -1779126170000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "refreshToken": "{{ _.refreshToken }}"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: User-Agent
+            value: insomnia/12.5.0
+            description: ""
+            disabled: false
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.baseUrl }}/users/logout"
+        name: Logout
+        meta:
+          id: req_eba0225609da48e8967b4ff936110a65
+          created: 1778779048631
+          modified: 1779126200000
+          isPrivate: false
+          description: "Invalida o refreshToken. Flutter/mobile pode enviar no body; web pode usar o cookie. Sempre limpa o cookie no response."
+          sortKey: -1779126160000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "refreshToken": "{{ _.refreshToken }}"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: User-Agent
+            value: insomnia/12.5.0
+            description: ""
+            disabled: false
+        authentication:
+          type: bearer
+          disabled: false
+          token: "{{ _.accessToken }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.baseUrl }}/users/search?userName={{ _.searchUserName }}"
+        name: Pesquisar usuario por userName
+        meta:
+          id: req_user_search_001
+          created: 1779126090000
+          modified: 1779126200000
+          isPrivate: false
+          description: "Busca usuarios por userName parcial. Retorna uuid, userName e profileImageUrl para convite interno."
+          sortKey: -1779126150000
+        method: GET
+        headers:
+          - name: User-Agent
+            value: insomnia/12.5.0
+            description: ""
+            disabled: false
+        authentication:
+          type: bearer
+          disabled: false
+          token: "{{ _.accessToken }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.baseUrl }}/users/me"
+        name: Usuario autenticado
+        meta:
+          id: req_user_me_001
+          created: 1779126210000
+          modified: 1779126210000
+          isPrivate: false
+          description: "Retorna uuid, email, userName, profileImageUrl e roles do usuario autenticado."
+          sortKey: -1779126140000
+        method: GET
+        headers:
+          - name: User-Agent
+            value: insomnia/12.5.0
+            description: ""
+            disabled: false
+        authentication:
+          type: bearer
+          disabled: false
+          token: "{{ _.accessToken }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.baseUrl }}/users/me/profile-image"
+        name: Atualizar imagem de perfil
+        meta:
+          id: req_user_profile_image_001
+          created: 1779126220000
+          modified: 1779126220000
+          isPrivate: false
+          description: "Atualiza a URL da imagem de perfil do usuario autenticado. Envie null ou string vazia para remover."
+          sortKey: -1779126130000
+        method: PUT
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "profileImageUrl": "{{ _.profileImageUrl }}"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: User-Agent
+            value: insomnia/12.5.0
+            description: ""
+            disabled: false
+        authentication:
+          type: bearer
+          disabled: false
+          token: "{{ _.accessToken }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+  - name: Cifras
+    meta:
+      id: fld_cifras_001
+      created: 1779126200000
+      modified: 1779126200000
+      sortKey: -1779126000000
+    children:
+      - url: "{{ _.baseUrl }}/chord/preview"
+        name: Preview da cifra
+        meta:
+          id: req_429ea7eaea7d4715be62ccf5d81e6dc7
+          created: 1778702681213
+          modified: 1779126200000
+          isPrivate: false
+          description: "Envie um arquivo PDF/TXT no campo file. A resposta retorna uuid, chordName, artist, chordPro e status DRAFT."
+          sortKey: -1779126190000
+        method: POST
+        body:
+          mimeType: multipart/form-data
+          params:
+            - name: file
+              value: ""
+              description: "Arquivo da cifra para extrair o ChordPro."
+              disabled: false
+              fileName: /caminho/para/sua-cifra.pdf
+              type: file
+        headers:
+          - name: Content-Type
+            value: multipart/form-data
+          - name: User-Agent
+            value: insomnia/12.5.0
+            description: ""
+            disabled: false
+        authentication:
+          type: bearer
+          disabled: false
+          token: "{{ _.accessToken }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.baseUrl }}/chord/confirm/{{ _.chordUuid }}"
+        name: Confirmar cifra
+        meta:
+          id: req_confirm_chord_001
+          created: 1779126000000
+          modified: 1779126200000
+          isPrivate: false
+          description: "Use em chordUuid o uuid retornado no preview. Body: chordName, artist e chordPro."
+          sortKey: -1779126180000
+        method: PUT
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "chordName": "Djavan - Samurai",
+              "artist": "Não informado",
+              "chordPro": "Djavan - Samurai\n{section: Intro}\n[E7M] [Gº] [G#m7] [C#7(9)]\n[E7M] [Gº] [G#m7] [B7(13)] [B7(2)]\n\n[E7M]Ai[Gº]..[G#m7]. quanto quer[C#7(9)]er\n[E7M]Cabe em meu c[Gº]oraç[G#m7]ão [B7(9)]"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: User-Agent
+            value: insomnia/12.5.0
+            description: ""
+            disabled: false
+        authentication:
+          type: bearer
+          disabled: false
+          token: "{{ _.accessToken }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.baseUrl }}/chord/{{ _.chordUuid }}"
+        name: Ver cifra por UUID
+        meta:
+          id: req_dac1b1785c824520962db75a1b9667c1
+          created: 1778860699518
+          modified: 1779126200000
+          isPrivate: false
+          description: "Use em chordUuid o uuid da cifra retornado no preview ou na confirmacao."
+          sortKey: -1779126170000
+        method: GET
+        headers:
+          - name: User-Agent
+            value: insomnia/12.5.0
+            description: ""
+            disabled: false
+        authentication:
+          type: bearer
+          disabled: false
+          token: "{{ _.accessToken }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.baseUrl }}/chord/search?chordName={{ _.searchChordName }}"
+        name: Pesquisar cifra
+        meta:
+          id: req_e34bb767a01d4fbfb9a62d0ecf2fd3c6
+          created: 1778861448209
+          modified: 1779126200000
+          isPrivate: false
+          description: "Busca cifras publicadas pelo parametro chordName."
+          sortKey: -1779126160000
+        method: GET
+        headers:
+          - name: User-Agent
+            value: insomnia/12.5.0
+            description: ""
+            disabled: false
+        authentication:
+          type: bearer
+          disabled: false
+          token: "{{ _.accessToken }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+  - name: Setlists
+    meta:
+      id: fld_setlists_001
+      created: 1779126200000
+      modified: 1779126200000
+      sortKey: -1779125900000
+    children:
+      - url: "{{ _.baseUrl }}/setlists"
+        name: Criar setlist
+        meta:
+          id: req_setlist_create_001
+          created: 1779126100000
+          modified: 1779126200000
+          isPrivate: false
+          description: "Cria uma setlist para o usuario autenticado. visibility: PRIVATE, PUBLIC ou COLLABORATIVE."
+          sortKey: -1779126190000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "name": "Show de sabado",
+              "description": "Repertorio principal da apresentacao",
+              "visibility": "COLLABORATIVE"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: User-Agent
+            value: insomnia/12.5.0
+            description: ""
+            disabled: false
+        authentication:
+          type: bearer
+          disabled: false
+          token: "{{ _.accessToken }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.baseUrl }}/setlists/me"
+        name: Minhas setlists
+        meta:
+          id: req_setlist_me_001
+          created: 1779126110000
+          modified: 1779126200000
+          isPrivate: false
+          description: "Lista setlists criadas pelo usuario e setlists em que ele e colaborador aceito."
+          sortKey: -1779126180000
+        method: GET
+        headers:
+          - name: User-Agent
+            value: insomnia/12.5.0
+            description: ""
+            disabled: false
+        authentication:
+          type: bearer
+          disabled: false
+          token: "{{ _.accessToken }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.baseUrl }}/setlists/{{ _.setlistUuid }}"
+        name: Ver setlist
+        meta:
+          id: req_setlist_get_001
+          created: 1779126120000
+          modified: 1779126200000
+          isPrivate: false
+          description: "Ve uma setlist publica, propria ou compartilhada como colaborador aceito."
+          sortKey: -1779126170000
+        method: GET
+        headers:
+          - name: User-Agent
+            value: insomnia/12.5.0
+            description: ""
+            disabled: false
+        authentication:
+          type: bearer
+          disabled: false
+          token: "{{ _.accessToken }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.baseUrl }}/setlists/{{ _.setlistUuid }}"
+        name: Atualizar setlist
+        meta:
+          id: req_setlist_update_001
+          created: 1779126230000
+          modified: 1779126230000
+          isPrivate: false
+          description: "Somente o dono atualiza nome, descricao e visibility. Ao sair de COLLABORATIVE, colaboradores/convites sao removidos."
+          sortKey: -1779126168000
+        method: PUT
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "name": "Show de sabado - atualizado",
+              "description": "Repertorio final da apresentacao",
+              "visibility": "PUBLIC"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: User-Agent
+            value: insomnia/12.5.0
+            description: ""
+            disabled: false
+        authentication:
+          type: bearer
+          disabled: false
+          token: "{{ _.accessToken }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.baseUrl }}/setlists/{{ _.setlistUuid }}"
+        name: Deletar setlist
+        meta:
+          id: req_setlist_delete_001
+          created: 1779126240000
+          modified: 1779126240000
+          isPrivate: false
+          description: "Somente o dono remove a setlist."
+          sortKey: -1779126166000
+        method: DELETE
+        headers:
+          - name: User-Agent
+            value: insomnia/12.5.0
+            description: ""
+            disabled: false
+        authentication:
+          type: bearer
+          disabled: false
+          token: "{{ _.accessToken }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.baseUrl }}/setlists/{{ _.setlistUuid }}/chords/{{ _.chordUuid }}"
+        name: Adicionar cifra na setlist
+        meta:
+          id: req_setlist_add_chord_001
+          created: 1779126130000
+          modified: 1779126200000
+          isPrivate: false
+          description: "Adiciona uma cifra publicada. Dono ou colaborador ACCEPTED podem adicionar."
+          sortKey: -1779126160000
+        method: POST
+        headers:
+          - name: User-Agent
+            value: insomnia/12.5.0
+            description: ""
+            disabled: false
+        authentication:
+          type: bearer
+          disabled: false
+          token: "{{ _.accessToken }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.baseUrl }}/setlists/{{ _.setlistUuid }}/chords/{{ _.chordUuid }}"
+        name: Remover cifra da setlist
+        meta:
+          id: req_setlist_remove_chord_001
+          created: 1779126140000
+          modified: 1779126200000
+          isPrivate: false
+          description: "Remove uma cifra da setlist e reorganiza as positions."
+          sortKey: -1779126150000
+        method: DELETE
+        headers:
+          - name: User-Agent
+            value: insomnia/12.5.0
+            description: ""
+            disabled: false
+        authentication:
+          type: bearer
+          disabled: false
+          token: "{{ _.accessToken }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.baseUrl }}/setlists/{{ _.setlistUuid }}/chords/reorder"
+        name: Reordenar cifras da setlist
+        meta:
+          id: req_setlist_reorder_chords_001
+          created: 1779126150000
+          modified: 1779126200000
+          isPrivate: false
+          description: "Envie todas as cifras da setlist com suas novas posicoes."
+          sortKey: -1779126140000
+        method: PUT
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "chords": [
+                {
+                  "chordUuid": "{{ _.chordUuid }}",
+                  "position": 1
+                }
+              ]
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: User-Agent
+            value: insomnia/12.5.0
+            description: ""
+            disabled: false
+        authentication:
+          type: bearer
+          disabled: false
+          token: "{{ _.accessToken }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+  - name: Convites de Setlist
+    meta:
+      id: fld_convites_setlist_001
+      created: 1779126200000
+      modified: 1779126200000
+      sortKey: -1779125800000
+    children:
+      - url: "{{ _.baseUrl }}/setlists/{{ _.setlistUuid }}/collaborator-invites"
+        name: Convidar colaborador
+        meta:
+          id: req_setlist_add_collaborator_001
+          created: 1779126160000
+          modified: 1779126200000
+          isPrivate: false
+          description: "Somente o dono cria convite. A setlist precisa ser COLLABORATIVE. Use collaboratorUserUuid vindo da busca de usuario."
+          sortKey: -1779126190000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "userUuid": "{{ _.collaboratorUserUuid }}"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: User-Agent
+            value: insomnia/12.5.0
+            description: ""
+            disabled: false
+        authentication:
+          type: bearer
+          disabled: false
+          token: "{{ _.accessToken }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.baseUrl }}/setlists/collaborator-invites/me"
+        name: Meus convites pendentes
+        meta:
+          id: req_setlist_my_invites_001
+          created: 1779126165000
+          modified: 1779126200000
+          isPrivate: false
+          description: "Lista convites PENDING do usuario autenticado."
+          sortKey: -1779126180000
+        method: GET
+        headers:
+          - name: User-Agent
+            value: insomnia/12.5.0
+            description: ""
+            disabled: false
+        authentication:
+          type: bearer
+          disabled: false
+          token: "{{ _.accessToken }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.baseUrl }}/setlists/collaborator-invites/{{ _.inviteUuid }}/accept"
+        name: Aceitar convite
+        meta:
+          id: req_setlist_accept_invite_001
+          created: 1779126166000
+          modified: 1779126200000
+          isPrivate: false
+          description: "Usuario convidado aceita um convite PENDING e vira colaborador ACCEPTED."
+          sortKey: -1779126170000
+        method: POST
+        headers:
+          - name: User-Agent
+            value: insomnia/12.5.0
+            description: ""
+            disabled: false
+        authentication:
+          type: bearer
+          disabled: false
+          token: "{{ _.accessToken }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.baseUrl }}/setlists/collaborator-invites/{{ _.inviteUuid }}/decline"
+        name: Recusar convite
+        meta:
+          id: req_setlist_decline_invite_001
+          created: 1779126167000
+          modified: 1779126200000
+          isPrivate: false
+          description: "Usuario convidado recusa um convite PENDING."
+          sortKey: -1779126160000
+        method: POST
+        headers:
+          - name: User-Agent
+            value: insomnia/12.5.0
+            description: ""
+            disabled: false
+        authentication:
+          type: bearer
+          disabled: false
+          token: "{{ _.accessToken }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.baseUrl }}/setlists/{{ _.setlistUuid }}/collaborators/{{ _.collaboratorUserUuid }}"
+        name: Remover colaborador ou convite
+        meta:
+          id: req_setlist_remove_collaborator_001
+          created: 1779126170000
+          modified: 1779126200000
+          isPrivate: false
+          description: "Somente o dono remove colaborador aceito ou convite existente."
+          sortKey: -1779126150000
+        method: DELETE
+        headers:
+          - name: User-Agent
+            value: insomnia/12.5.0
+            description: ""
+            disabled: false
+        authentication:
+          type: bearer
+          disabled: false
+          token: "{{ _.accessToken }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+cookieJar:
+  name: Default Jar
+  meta:
+    id: jar_c9584ee6e91f9ace7865cce84a308476a1e8e48c
+    created: 1777984369908
+    modified: 1779126200000
+  cookies: []
+environments:
+  name: Base Environment
+  meta:
+    id: env_c9584ee6e91f9ace7865cce84a308476a1e8e48c
+    created: 1777984369908
+    modified: 1779126200000
+    isPrivate: false
+  data:
+    baseUrl: http://localhost:8080
+    accessToken: COLE_SEU_ACCESS_TOKEN_AQUI
+    refreshToken: COLE_SEU_REFRESH_TOKEN_AQUI
+    searchUserName: gabriel
+    searchChordName: Samurai
+    profileImageUrl: https://example.com/avatar-gabriel.png
+    chordUuid: bf0dd385-cd1a-44d8-a68f-952219006101
+    setlistUuid: COLE_UUID_DA_SETLIST_AQUI
+    collaboratorUserUuid: COLE_UUID_DO_COLABORADOR_AQUI
+    inviteUuid: COLE_UUID_DO_CONVITE_AQUI

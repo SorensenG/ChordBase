@@ -8,8 +8,8 @@ import com.chordbase.application.hellpers.ChordOwnershipPolicy;
 import com.chordbase.domain.valueobjects.ChordStatus;
 import com.chordbase.infra.external.ExternalExtrator;
 import com.chordbase.presentation.Dtos.Chord.ChordPreviewResponse;
-import com.chordbase.presentation.Dtos.Chord.ChordSearchResponse;
-import com.chordbase.presentation.Dtos.Chord.ChrodVizualizationResponse;
+import com.chordbase.presentation.Dtos.Chord.SimpleChordVizualizationResponse;
+import com.chordbase.presentation.Dtos.Chord.FullChrodVizualizationResponse;
 import com.chordbase.presentation.Dtos.Chord.ConfirmChordRequest;
 import com.chordbase.presentation.Dtos.Chord.CreateChordResponse;
 import org.springframework.stereotype.Service;
@@ -97,7 +97,7 @@ public class ChordService {
     }
 
     @Transactional(readOnly = true)
-    public ChrodVizualizationResponse getChord(UUID chordUuid, User user) {
+    public FullChrodVizualizationResponse getChord(UUID chordUuid, User user) {
 
         Chord chord = findChordByUuid(chordUuid);
 
@@ -105,7 +105,7 @@ public class ChordService {
             chordOwnershipPolicy.validateOwner(chord, user);
         }
 
-        return new ChrodVizualizationResponse(
+        return new FullChrodVizualizationResponse(
                 chord.getUuid(),
                 chord.getName(),
                 chordMetadataResolver.fallbackArtist(chord.getArtist()),
@@ -115,17 +115,17 @@ public class ChordService {
 
     }
 
-    public List<ChordSearchResponse> findChord(String chordName) {
+    public List<SimpleChordVizualizationResponse> findChord(String chordName) {
         List<Chord> chords = chordRepository.findByNameContainingIgnoreCaseAndStatus(chordName, ChordStatus.PUBLISHED.name());
 
         if (chords.isEmpty()) {
             throw new IllegalArgumentException("Chord not found with name: " + chordName);
         }
 
-        List<ChordSearchResponse> chordResponse = new ArrayList<>();
+        List<SimpleChordVizualizationResponse> chordResponse = new ArrayList<>();
 
         for (Chord c : chords) {
-            chordResponse.add(new ChordSearchResponse(c.getUuid(), c.getName(), chordMetadataResolver.fallbackArtist(c.getArtist()), c.getAddByUser()));
+            chordResponse.add(new SimpleChordVizualizationResponse(c.getUuid(), c.getName(), chordMetadataResolver.fallbackArtist(c.getArtist()), c.getAddByUser()));
         }
 
         return chordResponse;

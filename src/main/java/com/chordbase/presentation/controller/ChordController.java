@@ -4,9 +4,9 @@ import com.chordbase.application.hellpers.AuthenticatedUserResolver;
 import com.chordbase.application.services.ChordService;
 import com.chordbase.domain.entities.User;
 import com.chordbase.infra.security.UserDetailsImp;
-import com.chordbase.presentation.Dtos.Chord.ChordSearchResponse;
+import com.chordbase.presentation.Dtos.Chord.SimpleChordVizualizationResponse;
 import com.chordbase.presentation.Dtos.Chord.ChordPreviewResponse;
-import com.chordbase.presentation.Dtos.Chord.ChrodVizualizationResponse;
+import com.chordbase.presentation.Dtos.Chord.FullChrodVizualizationResponse;
 import com.chordbase.presentation.Dtos.Chord.ConfirmChordRequest;
 import com.chordbase.presentation.Dtos.Chord.CreateChordResponse;
 import jakarta.validation.Valid;
@@ -55,7 +55,7 @@ public class ChordController {
 
 
     @GetMapping("/{chordUuid}")
-    public ResponseEntity<ChrodVizualizationResponse> getChord(@AuthenticationPrincipal UserDetailsImp userImp, @PathVariable UUID chordUuid) {
+    public ResponseEntity<FullChrodVizualizationResponse> getChord(@AuthenticationPrincipal UserDetailsImp userImp, @PathVariable UUID chordUuid) {
 
         User user = authenticatedUserResolver.resolve(userImp);
 
@@ -67,7 +67,7 @@ public class ChordController {
 
 
     @GetMapping("/search")
-    public ResponseEntity<List<ChordSearchResponse>> searchChord(@RequestParam String chordName) {
+    public ResponseEntity<List<SimpleChordVizualizationResponse>> searchChord(@RequestParam String chordName) {
 
         var chord = chordService.findChord(chordName);
 
