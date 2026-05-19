@@ -14,6 +14,9 @@ import java.util.UUID;
 public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByEmail(String email);
 
+    @Query("select u from User u order by u.userName.value asc")
+    List<User> findAllByOrderByUserNameAsc();
+
     @Query("select count(u) > 0 from User u where lower(u.userName.value) = lower(:userName)")
     boolean existsByUserNameIgnoreCase(@Param("userName") String userName);
 

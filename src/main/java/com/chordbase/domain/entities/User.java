@@ -30,7 +30,12 @@ public class User {
     @Column(nullable = false)
     private String passwordHash;
 
+    @Column(columnDefinition = "text")
     private String profileImageUrl;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean active = true;
 
     @ManyToMany(fetch = FetchType.EAGER, cascade = CascadeType.PERSIST)
     @JoinTable(name = "user_roles",
@@ -63,6 +68,14 @@ public class User {
 
     public String getProfileImageUrl() {
         return profileImageUrl;
+    }
+
+    public Boolean getActive() {
+        return active;
+    }
+
+    public boolean isActive() {
+        return !Boolean.FALSE.equals(active);
     }
 
     public List<Role> getRoles() {

@@ -59,6 +59,7 @@ public class UserService {
                 .passwordHash(securityConfiguration.passwordEncoder().encode(request.password()))
                 .roles(List.of(Role.builder().role(request.role()).build()))
                 .profileImageUrl(normalizeProfileImageUrl(request.profileImageUrl()))
+                .active(true)
                 .build();
 
         userRepository.save(user);
@@ -72,6 +73,11 @@ public class UserService {
 
         if (userRepository.findByEmail(request.email()).isEmpty()) {
             throw new BadCredentialsException("Invalid email or password");
+        }
+
+        User loginUser = userRepository.findByEmail(request.email()).orElseThrow(() -> new BadCredentialsException("Invalid email or password"));
+        if (!loginUser.isActive()) {
+            throw new BadCredentialsException("User account is inactive");
         }
 
         UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(request.email(), request.password());
@@ -88,6 +94,7 @@ public class UserService {
                 userDetails.getUsername(),
                 userDetails.getUser().getUuid(),
                 userDetails.getUser().getProfileImageUrl(),
+                userDetails.getUser().getActive(),
                 userDetails.getUser().getRoles().stream().map(Role::getRole).toList(),
                 accessToken,
                 refreshToken
@@ -147,6 +154,7 @@ public class UserService {
                 user.getEmail(),
                 user.getUserName(),
                 user.getProfileImageUrl(),
+                user.getActive(),
                 user.getRoles().stream().map(Role::getRole).toList()
         );
     }
@@ -157,6 +165,7 @@ public class UserService {
                 user.getUserName(),
                 user.getEmail(),
                 user.getProfileImageUrl(),
+                user.getActive(),
                 user.getRoles().stream().map(Role::getRole).toList()
         );
     }

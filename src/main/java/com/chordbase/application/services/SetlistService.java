@@ -13,6 +13,7 @@ import com.chordbase.domain.repository.UserRepository;
 import com.chordbase.domain.valueobjects.ChordStatus;
 import com.chordbase.domain.valueobjects.SetlistCollaboratorStatus;
 import com.chordbase.domain.valueobjects.SetlistVisibility;
+import com.chordbase.domain.valueobjects.UserRole;
 import com.chordbase.presentation.Dtos.Setlist.CreateSetlistInviteRequest;
 import com.chordbase.presentation.Dtos.Setlist.CreateSetlistRequest;
 import com.chordbase.presentation.Dtos.Setlist.ReorderSetlistChordsRequest;
@@ -305,7 +306,8 @@ public class SetlistService {
     }
 
     private void validateCanView(Setlist setlist, User user) {
-        if (SetlistVisibility.PUBLIC.equals(setlist.getVisibility()) || isOwner(setlist, user) || isCollaborator(setlist, user)) {
+        if (isAdmin(user) || SetlistVisibility.PUBLIC.equals(setlist.getVisibility())
+                || isOwner(setlist, user) || isCollaborator(setlist, user)) {
             return;
         }
 
@@ -313,7 +315,7 @@ public class SetlistService {
     }
 
     private void validateCanEditChords(Setlist setlist, User user) {
-        if (isOwner(setlist, user) || isCollaborator(setlist, user)) {
+        if (isAdmin(user) || isOwner(setlist, user) || isCollaborator(setlist, user)) {
             return;
         }
 
@@ -321,9 +323,14 @@ public class SetlistService {
     }
 
     private void validateOwner(Setlist setlist, User user) {
-        if (!isOwner(setlist, user)) {
+        if (!isAdmin(user) && !isOwner(setlist, user)) {
             throw new AccessDeniedException("Only the setlist owner can perform this action");
         }
+    }
+
+    private boolean isAdmin(User user) {
+        return user != null && user.getRoles() != null && user.getRoles().stream()
+                .anyMatch(role -> UserRole.ROLE_ADMIN.equals(role.getRole()));
     }
 
     private boolean isOwner(Setlist setlist, User user) {

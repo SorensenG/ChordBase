@@ -54,15 +54,14 @@ public class ChordController {
     }
 
 
-    @GetMapping("/{chordUuid}")
-    public ResponseEntity<FullChrodVizualizationResponse> getChord(@AuthenticationPrincipal UserDetailsImp userImp, @PathVariable UUID chordUuid) {
+    @GetMapping("/me")
+    public ResponseEntity<List<SimpleChordVizualizationResponse>> listMyChords(@AuthenticationPrincipal UserDetailsImp userImp) {
 
         User user = authenticatedUserResolver.resolve(userImp);
 
-        var chord = chordService.getChord(chordUuid, user);
+        var chords = chordService.listMyChords(user);
 
-        return ResponseEntity.status(HttpStatus.OK).body(chord);
-
+        return ResponseEntity.status(HttpStatus.OK).body(chords);
     }
 
 
@@ -72,5 +71,39 @@ public class ChordController {
         var chord = chordService.findChord(chordName);
 
         return ResponseEntity.status(HttpStatus.OK).body(chord);
+    }
+
+
+    @PutMapping(value = "/{chordUuid}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<FullChrodVizualizationResponse> updateChord(@AuthenticationPrincipal UserDetailsImp userImp, @PathVariable UUID chordUuid, @Valid @RequestBody ConfirmChordRequest request) {
+
+        User user = authenticatedUserResolver.resolve(userImp);
+
+        var chord = chordService.updateChord(chordUuid, request, user);
+
+        return ResponseEntity.status(HttpStatus.OK).body(chord);
+    }
+
+
+    @DeleteMapping("/{chordUuid}")
+    public ResponseEntity<Void> deleteChord(@AuthenticationPrincipal UserDetailsImp userImp, @PathVariable UUID chordUuid) {
+
+        User user = authenticatedUserResolver.resolve(userImp);
+
+        chordService.deleteChord(chordUuid, user);
+
+        return ResponseEntity.noContent().build();
+    }
+
+
+    @GetMapping("/{chordUuid}")
+    public ResponseEntity<FullChrodVizualizationResponse> getChord(@AuthenticationPrincipal UserDetailsImp userImp, @PathVariable UUID chordUuid) {
+
+        User user = authenticatedUserResolver.resolve(userImp);
+
+        var chord = chordService.getChord(chordUuid, user);
+
+        return ResponseEntity.status(HttpStatus.OK).body(chord);
+
     }
 }

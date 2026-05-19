@@ -12,6 +12,8 @@ import java.util.UUID;
 
 @Repository
 public interface SetlistRepository extends JpaRepository<Setlist, UUID> {
+    List<Setlist> findByOwner_UuidOrderByNameAsc(UUID ownerUuid);
+
     @Query("""
             select distinct s
             from Setlist s

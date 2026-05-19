@@ -5,5 +5,5 @@ import com.chordbase.domain.valueobjects.UserRole;
 import java.util.List;
 import java.util.UUID;
 
-public record LoginResponse(String userName, UUID uuid, String profileImageUrl, List<UserRole> roles, String accessToken, String refreshToken) {
+public record LoginResponse(String userName, UUID uuid, String profileImageUrl, Boolean active, List<UserRole> roles, String accessToken, String refreshToken) {
 }
