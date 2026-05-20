@@ -12,6 +12,7 @@ import java.util.UUID;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, UUID> {
+    @Query("select u from User u where u.email.value = :email")
     Optional<User> findByEmail(String email);
 
     @Query("select u from User u order by u.userName.value asc")

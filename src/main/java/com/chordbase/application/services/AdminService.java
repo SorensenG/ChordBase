@@ -108,6 +108,7 @@ public class AdminService {
                 user.getUserName(),
                 user.getEmail(),
                 user.getProfileImageUrl(),
+                user.getDescription(),
                 user.getActive(),
                 user.getRoles().stream().map(Role::getRole).toList()
         );

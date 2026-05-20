@@ -13,6 +13,7 @@ import com.chordbase.presentation.Dtos.User.RefreshTokenResponse;
 import com.chordbase.presentation.Dtos.User.RegisterUserDtoRequest;
 import com.chordbase.presentation.Dtos.User.RegisterUserResponse;
 import com.chordbase.presentation.Dtos.User.UpdateProfileImageRequest;
+import com.chordbase.presentation.Dtos.User.UpdateProfileRequest;
 import com.chordbase.presentation.Dtos.User.UserSearchResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
@@ -109,6 +110,17 @@ public class UserController {
     ) {
         User user = authenticatedUserResolver.resolve(userImp);
         var currentUser = userService.updateProfileImage(user, request);
+
+        return ResponseEntity.status(HttpStatus.OK).body(currentUser);
+    }
+
+    @PutMapping("/me/profile")
+    public ResponseEntity<CurrentUserResponse> updateProfile(
+            @AuthenticationPrincipal UserDetailsImp userImp,
+            @RequestBody UpdateProfileRequest request
+    ) {
+        User user = authenticatedUserResolver.resolve(userImp);
+        var currentUser = userService.updateProfile(user, request);
 
         return ResponseEntity.status(HttpStatus.OK).body(currentUser);
     }

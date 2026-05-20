@@ -4,6 +4,7 @@ import com.chordbase.domain.entities.Role;
 import com.chordbase.domain.entities.User;
 import com.chordbase.domain.repository.RefreshTokenRepository;
 import com.chordbase.domain.repository.UserRepository;
+import com.chordbase.domain.valueobjects.EmailAddress;
 import com.chordbase.domain.valueobjects.UserName;
 import com.chordbase.domain.valueobjects.UserRole;
 import org.junit.jupiter.api.BeforeEach;
@@ -85,7 +86,7 @@ class RefreshTokenFlowTest {
     private User user(String email) {
         return User.builder()
                 .userName(UserName.of(email.substring(0, email.indexOf('@')).replace('-', '_')))
-                .email(email)
+                .email(EmailAddress.of(email))
                 .passwordHash("password-hash")
                 .active(true)
                 .roles(List.of(Role.builder().role(UserRole.ROLE_USER).build()))

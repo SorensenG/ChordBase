@@ -1,6 +1,7 @@
 package com.chordbase.domain.entities;
 
 import com.chordbase.domain.valueobjects.UserName;
+import com.chordbase.domain.valueobjects.EmailAddress;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
@@ -22,9 +23,8 @@ public class User {
     @Embedded
     private UserName userName;
 
-    @NotBlank
-    @Column(nullable = false, unique = true)
-    private String email;
+    @Embedded
+    private EmailAddress email;
 
     @NotBlank
     @Column(nullable = false)
@@ -32,6 +32,9 @@ public class User {
 
     @Column(columnDefinition = "text")
     private String profileImageUrl;
+
+    @Column(columnDefinition = "text")
+    private String description;
 
     @Column(nullable = false)
     @Builder.Default
@@ -59,6 +62,10 @@ public class User {
     }
 
     public String getEmail() {
+        return email == null ? null : email.value();
+    }
+
+    public EmailAddress getEmailValue() {
         return email;
     }
 
@@ -68,6 +75,10 @@ public class User {
 
     public String getProfileImageUrl() {
         return profileImageUrl;
+    }
+
+    public String getDescription() {
+        return description;
     }
 
     public Boolean getActive() {

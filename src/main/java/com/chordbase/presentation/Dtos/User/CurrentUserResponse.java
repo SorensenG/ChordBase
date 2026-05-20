@@ -10,6 +10,7 @@ public record CurrentUserResponse(
         String userName,
         String email,
         String profileImageUrl,
+        String description,
         Boolean active,
         List<UserRole> roles
 ) {

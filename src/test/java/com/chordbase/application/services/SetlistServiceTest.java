@@ -10,6 +10,7 @@ import com.chordbase.domain.repository.SetlistCollaboratorRepository;
 import com.chordbase.domain.repository.SetlistRepository;
 import com.chordbase.domain.repository.UserRepository;
 import com.chordbase.domain.valueobjects.ChordStatus;
+import com.chordbase.domain.valueobjects.EmailAddress;
 import com.chordbase.domain.valueobjects.SetlistCollaboratorStatus;
 import com.chordbase.domain.valueobjects.SetlistVisibility;
 import com.chordbase.domain.valueobjects.UserName;
@@ -280,7 +281,7 @@ class SetlistServiceTest {
         return User.builder()
                 .uuid(UUID.randomUUID())
                 .userName(UserName.of(email.substring(0, email.indexOf("@"))))
-                .email(email)
+                .email(EmailAddress.of(email))
                 .passwordHash("hash")
                 .build();
     }
