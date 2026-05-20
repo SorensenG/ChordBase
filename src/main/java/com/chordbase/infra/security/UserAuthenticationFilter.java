@@ -7,6 +7,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -43,11 +44,11 @@ public class UserAuthenticationFilter extends OncePerRequestFilter {
 
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 } catch (RuntimeException exception) {
-                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token inválido ou expirado.");
+                    writeUnauthorized(request, response, "Token inválido ou expirado.");
                     return;
                 }
             } else {
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "O token está ausente.");
+                writeUnauthorized(request, response, "O token está ausente.");
                 return;
             }
         }
@@ -69,6 +70,26 @@ public class UserAuthenticationFilter extends OncePerRequestFilter {
 
         String requestURI = request.getRequestURI();
         return !Arrays.asList(SecurityConfiguration.ENDPOINTS_WITH_AUTHENTICATION_NOT_REQUIRED).contains(requestURI);
+    }
+
+    private void writeUnauthorized(HttpServletRequest request, HttpServletResponse response, String message) throws IOException {
+        addLocalCorsHeaders(request, response);
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.getWriter().write("{\"message\":\"" + message + "\"}");
+    }
+
+    private void addLocalCorsHeaders(HttpServletRequest request, HttpServletResponse response) {
+        String origin = request.getHeader("Origin");
+        if (origin == null || !(origin.matches("http://localhost:\\d+") || origin.matches("http://127\\.0\\.0\\.1:\\d+"))) {
+            return;
+        }
+
+        response.setHeader("Access-Control-Allow-Origin", origin);
+        response.setHeader("Access-Control-Allow-Credentials", "true");
+        response.addHeader("Vary", "Origin");
+        response.addHeader("Vary", "Access-Control-Request-Method");
+        response.addHeader("Vary", "Access-Control-Request-Headers");
     }
 
 }
