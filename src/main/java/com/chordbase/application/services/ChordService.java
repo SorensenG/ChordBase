@@ -8,6 +8,7 @@ import com.chordbase.application.hellpers.ChordOwnershipPolicy;
 import com.chordbase.domain.valueobjects.ChordStatus;
 import com.chordbase.domain.valueobjects.UserRole;
 import com.chordbase.infra.external.ExternalExtrator;
+import com.chordbase.presentation.Dtos.Chord.ChordExtractionResponse;
 import com.chordbase.presentation.Dtos.Chord.ChordPreviewResponse;
 import com.chordbase.presentation.Dtos.Chord.SimpleChordVizualizationResponse;
 import com.chordbase.presentation.Dtos.Chord.FullChrodVizualizationResponse;
@@ -22,9 +23,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 @Service
 public class ChordService {
+    private static final String NO_CHORD_IMAGE_MESSAGE = "Não consegui identificar uma cifra nessa imagem. Envie uma foto mais nítida, PDF ou TXT.";
+    private static final Pattern CHORD_MARKER_PATTERN = Pattern.compile("\\[[A-G](?:#|b)?(?:m|maj|min|dim|aug|sus|add|º|°|[0-9()/+#b-])*]");
+    private static final Pattern TONE_METADATA_PATTERN = Pattern.compile("(?im)^(?:tom|key|capo|afina(?:ç|c)ão)\\s*:");
+    private static final Pattern TABLATURE_PATTERN = Pattern.compile("(?im)^[EADGBE]\\|");
+
     private final ExternalExtrator externalExtrator;
     private final ChordRepository chordRepository;
     private final ChordMetadataResolver chordMetadataResolver;
@@ -54,6 +61,14 @@ public class ChordService {
         var microserviceResponse = externalExtrator.extractChordPro(file);
         var chordPro = microserviceResponse.chordPro();
         var fallbackName = file.getOriginalFilename();
+
+        if ("FAILED".equalsIgnoreCase(microserviceResponse.status()) || chordPro == null || chordPro.isBlank()) {
+            throw new IllegalArgumentException(resolveExtractionFailureMessage(microserviceResponse));
+        }
+
+        if ("OCR_IMAGE".equalsIgnoreCase(microserviceResponse.sourceType()) && !hasChordSignals(chordPro)) {
+            throw new IllegalArgumentException(NO_CHORD_IMAGE_MESSAGE);
+        }
 
         if (microserviceResponse.metadata() != null && microserviceResponse.metadata().filename() != null) {
             fallbackName = microserviceResponse.metadata().filename();
@@ -187,6 +202,24 @@ public class ChordService {
     private boolean isAdmin(User user) {
         return user != null && user.getRoles() != null && user.getRoles().stream()
                 .anyMatch(role -> UserRole.ROLE_ADMIN.equals(role.getRole()));
+    }
+
+    private String resolveExtractionFailureMessage(ChordExtractionResponse response) {
+        if (response.warnings() != null) {
+            for (String warning : response.warnings()) {
+                if (warning != null && !warning.isBlank()) {
+                    return warning;
+                }
+            }
+        }
+
+        return "Não foi possível extrair texto do arquivo.";
+    }
+
+    private boolean hasChordSignals(String chordPro) {
+        return CHORD_MARKER_PATTERN.matcher(chordPro).find()
+                || TONE_METADATA_PATTERN.matcher(chordPro).find()
+                || TABLATURE_PATTERN.matcher(chordPro).find();
     }
 
     private Chord findChordByUuid(UUID chordUuid) {

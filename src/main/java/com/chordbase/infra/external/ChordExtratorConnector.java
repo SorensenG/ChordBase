@@ -1,6 +1,8 @@
 package com.chordbase.infra.external;
 
 import com.chordbase.presentation.Dtos.Chord.ChordExtractionResponse;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
@@ -11,6 +13,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -19,6 +22,7 @@ import java.util.UUID;
 @Component
 public class ChordExtratorConnector implements ExternalExtrator {
     private final RestClient client;
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private final String extractionPath;
 
     public ChordExtratorConnector(
@@ -62,7 +66,23 @@ public class ChordExtratorConnector implements ExternalExtrator {
 
         } catch (IOException exception) {
             throw new IllegalArgumentException("Erro ao ler arquivo enviado.", exception);
+        } catch (RestClientResponseException exception) {
+            throw new IllegalArgumentException(resolveExtractorMessage(exception), exception);
         }
+    }
+
+    private String resolveExtractorMessage(RestClientResponseException exception) {
+        try {
+            JsonNode body = objectMapper.readTree(exception.getResponseBodyAsString());
+            JsonNode message = body.get("message");
+            if (message != null && message.isTextual() && !message.asText().isBlank()) {
+                return message.asText();
+            }
+        } catch (Exception ignored) {
+            // Fall back to a stable message below.
+        }
+
+        return "Não foi possível processar o arquivo enviado.";
     }
 
     private MediaType resolveContentType(MultipartFile file) {

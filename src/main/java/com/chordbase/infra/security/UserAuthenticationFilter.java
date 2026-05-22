@@ -80,16 +80,7 @@ public class UserAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private void addLocalCorsHeaders(HttpServletRequest request, HttpServletResponse response) {
-        String origin = request.getHeader("Origin");
-        if (origin == null || !(origin.matches("http://localhost:\\d+") || origin.matches("http://127\\.0\\.0\\.1:\\d+"))) {
-            return;
-        }
-
-        response.setHeader("Access-Control-Allow-Origin", origin);
-        response.setHeader("Access-Control-Allow-Credentials", "true");
-        response.addHeader("Vary", "Origin");
-        response.addHeader("Vary", "Access-Control-Request-Method");
-        response.addHeader("Vary", "Access-Control-Request-Headers");
+        SecurityConfiguration.addCorsHeadersForAllowedOrigin(request, response);
     }
 
 }

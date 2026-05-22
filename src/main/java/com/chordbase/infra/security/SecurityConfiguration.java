@@ -27,6 +27,13 @@ import java.util.List;
 @EnableWebSecurity
 public class SecurityConfiguration {
 
+    private static final List<String> ALLOWED_ORIGIN_PATTERNS = List.of(
+            "http://localhost:*",
+            "http://127.0.0.1:*",
+            "http://192.168.15.5:*",
+            "https://*.trycloudflare.com"
+    );
+
     public static final String[] ENDPOINTS_WITH_AUTHENTICATION_NOT_REQUIRED = {"/users/login",
             "/users/register",
             "/users/refresh",
@@ -70,10 +77,7 @@ public class SecurityConfiguration {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of(
-                "http://localhost:*",
-                "http://127.0.0.1:*"
-        ));
+        configuration.setAllowedOriginPatterns(ALLOWED_ORIGIN_PATTERNS);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"));
         configuration.setAllowCredentials(true);
@@ -90,15 +94,15 @@ public class SecurityConfiguration {
             int status,
             String message
     ) throws IOException {
-        addLocalCorsHeaders(request, response);
+        addCorsHeadersForAllowedOrigin(request, response);
         response.setStatus(status);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.getWriter().write("{\"message\":\"" + escapeJson(message == null ? "Unauthorized" : message) + "\"}");
     }
 
-    private void addLocalCorsHeaders(HttpServletRequest request, HttpServletResponse response) {
+    public static void addCorsHeadersForAllowedOrigin(HttpServletRequest request, HttpServletResponse response) {
         String origin = request.getHeader("Origin");
-        if (origin == null || !(origin.matches("http://localhost:\\d+") || origin.matches("http://127\\.0\\.0\\.1:\\d+"))) {
+        if (!isAllowedCorsOrigin(origin)) {
             return;
         }
 
@@ -107,6 +111,17 @@ public class SecurityConfiguration {
         response.addHeader("Vary", "Origin");
         response.addHeader("Vary", "Access-Control-Request-Method");
         response.addHeader("Vary", "Access-Control-Request-Headers");
+    }
+
+    public static boolean isAllowedCorsOrigin(String origin) {
+        if (origin == null) {
+            return false;
+        }
+
+        return origin.matches("http://localhost:\\d+") ||
+                origin.matches("http://127\\.0\\.0\\.1:\\d+") ||
+                origin.matches("http://192\\.168\\.15\\.5:\\d+") ||
+                origin.matches("(?i)https://[a-z0-9-]+\\.trycloudflare\\.com(:\\d+)?");
     }
 
     private String escapeJson(String value) {
