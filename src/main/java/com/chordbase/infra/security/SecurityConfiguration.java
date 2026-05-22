@@ -31,6 +31,8 @@ public class SecurityConfiguration {
             "http://localhost:*",
             "http://127.0.0.1:*",
             "http://192.168.15.5:*",
+            "https://chordbase-front.vercel.app",
+            "https://chordbase-front-*.vercel.app",
             "https://*.trycloudflare.com"
     );
 
@@ -121,6 +123,7 @@ public class SecurityConfiguration {
         return origin.matches("http://localhost:\\d+") ||
                 origin.matches("http://127\\.0\\.0\\.1:\\d+") ||
                 origin.matches("http://192\\.168\\.15\\.5:\\d+") ||
+                origin.matches("(?i)https://chordbase-front(?:-[a-z0-9-]+)*\\.vercel\\.app") ||
                 origin.matches("(?i)https://[a-z0-9-]+\\.trycloudflare\\.com(:\\d+)?");
     }
 
