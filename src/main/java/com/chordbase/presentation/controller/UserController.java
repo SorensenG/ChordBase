@@ -6,6 +6,7 @@ import com.chordbase.domain.entities.User;
 import com.chordbase.infra.security.RefreshTokenCookieService;
 import com.chordbase.infra.security.UserDetailsImp;
 import com.chordbase.presentation.Dtos.User.CurrentUserResponse;
+import com.chordbase.presentation.Dtos.User.GoogleLoginRequest;
 import com.chordbase.presentation.Dtos.User.LoginRequest;
 import com.chordbase.presentation.Dtos.User.LoginResponse;
 import com.chordbase.presentation.Dtos.User.RefreshTokenRequest;
@@ -60,6 +61,19 @@ public class UserController {
                 .header(HttpHeaders.SET_COOKIE, refreshTokenCookieService.createCookie(userLoged.refreshToken()).toString())
                 .body(userLoged);
 
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<LoginResponse> googleLogin(@Valid @RequestBody GoogleLoginRequest request) {
+        if (request == null) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        var userLoged = userService.googleLogin(request);
+
+        return ResponseEntity.status(HttpStatus.OK)
+                .header(HttpHeaders.SET_COOKIE, refreshTokenCookieService.createCookie(userLoged.refreshToken()).toString())
+                .body(userLoged);
     }
 
     @PostMapping("/refresh")
