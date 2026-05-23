@@ -26,13 +26,13 @@ class ChordExtratorConnectorTest {
                     {
                       "requestId": "request-id",
                       "status": "NEEDS_REVIEW",
-                      "sourceType": "OCR_IMAGE",
+                      "sourceType": "OCR_PDF",
                       "chordPro": "[C]Teste",
                       "confidence": 0.7,
                       "warnings": [],
                       "metadata": {
-                        "filename": "cifra.jpg",
-                        "mimeType": "image/jpeg",
+                        "filename": "cifra.pdf",
+                        "mimeType": "application/pdf",
                         "fileSizeBytes": 3,
                         "pagesProcessed": 1,
                         "tokenCount": 1,
@@ -56,8 +56,8 @@ class ChordExtratorConnectorTest {
             );
             MockMultipartFile file = new MockMultipartFile(
                     "file",
-                    "cifra.jpg",
-                    "image/jpeg",
+                    "cifra.pdf",
+                    "application/pdf",
                     new byte[]{1, 2, 3}
             ) {
                 @Override
@@ -68,9 +68,9 @@ class ChordExtratorConnectorTest {
 
             var response = connector.extractChordPro(file);
 
-            assertEquals("OCR_IMAGE", response.sourceType());
+            assertEquals("OCR_PDF", response.sourceType());
             assertTrue(contentType.get().startsWith("multipart/form-data;boundary="));
-            assertTrue(requestBody.get().contains("filename=\"cifra.jpg\""));
+            assertTrue(requestBody.get().contains("filename=\"cifra.pdf\""));
         } finally {
             server.stop(0);
         }

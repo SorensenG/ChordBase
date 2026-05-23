@@ -129,16 +129,13 @@ def validate_upload_metadata(file: UploadFile) -> None:
 
     if not file.filename:
         raise UploadValidationException(
-            message="Arquivo sem nome. Envie um PDF, imagem ou TXT válido.",
+            message="Arquivo sem nome. Envie um PDF ou TXT válido.",
             code="MISSING_FILENAME",
         )
 
     if suffix not in settings.allowed_extensions:
         raise UploadValidationException(
-            message=(
-                "Extensão não suportada. "
-                "Envie PDF, PNG, JPG, JPEG, WEBP, HEIC, HEIF ou TXT."
-            ),
+            message="A importação aceita apenas arquivos PDF ou TXT. Imagens não são suportadas no momento.",
             code="UNSUPPORTED_EXTENSION",
             details={"extension": suffix},
         )
@@ -146,7 +143,7 @@ def validate_upload_metadata(file: UploadFile) -> None:
     if content_type and content_type != "application/octet-stream":
         if content_type not in settings.allowed_mime_types:
             raise UploadValidationException(
-                message="Tipo de arquivo não suportado.",
+                message="A importação aceita apenas arquivos PDF ou TXT. Imagens não são suportadas no momento.",
                 code="UNSUPPORTED_MIME_TYPE",
                 details={"mimeType": content_type},
             )

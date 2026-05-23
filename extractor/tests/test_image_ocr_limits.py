@@ -1,4 +1,5 @@
 import asyncio
+from types import SimpleNamespace
 
 import pytest
 from PIL import Image
@@ -7,6 +8,7 @@ from app.api.routes import extraction_routes
 from app.domain.exceptions.extraction_exceptions import (
     ExtractionBusyException,
     ExtractionException,
+    UploadValidationException,
 )
 from app.infrastructure.extractors.image_ocr_extractor import _load_image
 
@@ -37,6 +39,25 @@ def test_rejects_unsafe_large_non_jpeg_image_before_processing(tmp_path, monkeyp
     assert error.value.code == "IMAGE_DIMENSIONS_TOO_LARGE"
 
 
+def test_upload_metadata_accepts_pdf_and_txt_documents():
+    extraction_routes.validate_upload_metadata(
+        SimpleNamespace(filename="song.pdf", content_type="application/pdf")
+    )
+    extraction_routes.validate_upload_metadata(
+        SimpleNamespace(filename="song.txt", content_type="text/plain")
+    )
+
+
+def test_upload_metadata_rejects_direct_image_import():
+    with pytest.raises(UploadValidationException) as error:
+        extraction_routes.validate_upload_metadata(
+            SimpleNamespace(filename="song.jpg", content_type="image/jpeg")
+        )
+
+    assert error.value.code == "UNSUPPORTED_EXTENSION"
+    assert "PDF ou TXT" in error.value.message
+
+
 @pytest.mark.asyncio
 async def test_extraction_queue_returns_controlled_busy_error(monkeypatch):
     semaphore = asyncio.Semaphore(1)
@@ -47,9 +68,9 @@ async def test_extraction_queue_returns_controlled_busy_error(monkeypatch):
     with pytest.raises(ExtractionBusyException) as error:
         await extraction_routes.run_extraction_with_resource_limit(
             service=object(),
-            file_path="/tmp/file.jpg",
-            filename="file.jpg",
-            mime_type="image/jpeg",
+            file_path="/tmp/file.pdf",
+            filename="file.pdf",
+            mime_type="application/pdf",
             file_size_bytes=1,
             request_id="request-id",
         )

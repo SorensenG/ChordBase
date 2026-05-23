@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import mimetypes
-import re
 from pathlib import Path
 from time import perf_counter
 from typing import Optional
@@ -19,7 +18,6 @@ from app.infrastructure.chordpro.diagram_filter import (
     remove_final_chord_diagram_block,
 )
 from app.infrastructure.chordpro.line_grouper import group_tokens_by_lines
-from app.infrastructure.extractors.image_ocr_extractor import extract_tokens_from_image
 from app.infrastructure.extractors.pdf_ocr_extractor import extract_tokens_from_scanned_pdf
 from app.infrastructure.extractors.pdf_text_extractor import (
     extract_tokens_from_text_pdf,
@@ -28,12 +26,6 @@ from app.infrastructure.extractors.pdf_text_extractor import (
 from app.infrastructure.extractors.text_file_extractor import extract_tokens_from_text_file
 
 logger = logging.getLogger(__name__)
-
-NO_CHORD_IMAGE_MESSAGE = (
-    "Não consegui identificar uma cifra nessa imagem. "
-    "Envie uma foto mais nítida, PDF ou TXT."
-)
-
 
 class ChordproExtractionService:
     def extract(
@@ -57,11 +49,7 @@ class ChordproExtractionService:
         warnings = extraction.warnings
 
         if not tokens:
-            message = (
-                NO_CHORD_IMAGE_MESSAGE
-                if extraction.source_type == SourceType.OCR_IMAGE
-                else "Não foi possível extrair texto do arquivo."
-            )
+            message = "Não foi possível extrair texto do arquivo."
             return self._build_failed_result(
                 filename=filename,
                 mime_type=detected_mime_type,
@@ -79,22 +67,6 @@ class ChordproExtractionService:
             warnings.append(DIAGRAM_REMOVED_WARNING)
 
         chordpro = convert_lines_to_chordpro(lines)
-
-        if (
-            extraction.source_type == SourceType.OCR_IMAGE
-            and not _has_chord_signals(chordpro)
-        ):
-            return self._build_failed_result(
-                filename=filename,
-                mime_type=detected_mime_type,
-                file_size_bytes=file_size_bytes,
-                source_type=extraction.source_type,
-                warnings=warnings + [NO_CHORD_IMAGE_MESSAGE],
-                started_at=started_at,
-                pages_processed=_count_pages(tokens),
-                token_count=len(tokens),
-                line_count=len(lines),
-            )
 
         confidence = self._calculate_confidence(tokens, extraction.source_type, chordpro)
 
@@ -166,17 +138,8 @@ class ChordproExtractionService:
                 ],
             )
 
-        if mime_type.startswith("image/"):
-            return _TokenExtraction(
-                source_type=SourceType.OCR_IMAGE,
-                tokens=extract_tokens_from_image(file_path),
-                warnings=[
-                    "Imagem processada por OCR. Revise o resultado antes de salvar."
-                ],
-            )
-
         raise UnsupportedFileException(
-            "Formato não suportado. Envie PDF, PNG, JPG, JPEG, WEBP, HEIC, HEIF ou TXT."
+            "A importação aceita apenas arquivos PDF ou TXT. Imagens não são suportadas no momento."
         )
 
     def _detect_mime_type(self, filename: Optional[str], mime_type: Optional[str]) -> str:
@@ -193,16 +156,6 @@ class ChordproExtractionService:
         suffix = Path(filename or "").suffix.lower()
         if suffix == ".pdf":
             return "application/pdf"
-        if suffix in {".jpg", ".jpeg"}:
-            return "image/jpeg"
-        if suffix == ".png":
-            return "image/png"
-        if suffix == ".webp":
-            return "image/webp"
-        if suffix == ".heic":
-            return "image/heic"
-        if suffix == ".heif":
-            return "image/heif"
         if suffix == ".txt":
             return "text/plain"
 
@@ -284,24 +237,3 @@ def _count_pages(tokens: list[ExtractedToken]) -> int:
 
 def _elapsed_ms(started_at: float) -> int:
     return round((perf_counter() - started_at) * 1000)
-
-
-def _has_chord_signals(chordpro: str) -> bool:
-    if not chordpro.strip():
-        return False
-
-    return any(
-        pattern.search(chordpro)
-        for pattern in (
-            _CHORD_MARKER_REGEX,
-            _TONE_METADATA_REGEX,
-            _TABLATURE_REGEX,
-        )
-    )
-
-
-_CHORD_MARKER_REGEX = re.compile(
-    r"\[[A-G](?:#|b)?(?:m|maj|min|dim|aug|sus|add|º|°|[0-9()/+#b-])*\]"
-)
-_TONE_METADATA_REGEX = re.compile(r"(?im)^(?:tom|key|capo|afina(?:ç|c)ão)\s*:")
-_TABLATURE_REGEX = re.compile(r"(?im)^[EADGBE]\|")

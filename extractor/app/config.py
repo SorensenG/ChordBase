@@ -30,10 +30,10 @@ class Settings(BaseSettings):
 
     review_confidence_threshold: float = 0.85
     allowed_mime_types_csv: str = Field(
-        default="application/pdf,image/png,image/jpeg,image/webp,image/heic,image/heif,text/plain",
+        default="application/pdf,text/plain",
         description="Comma-separated list of accepted upload MIME types.",
     )
-    allowed_extensions_csv: str = ".pdf,.png,.jpg,.jpeg,.webp,.heic,.heif,.txt"
+    allowed_extensions_csv: str = ".pdf,.txt"
     cors_allowed_origins_csv: str = "*"
 
     model_config = SettingsConfigDict(

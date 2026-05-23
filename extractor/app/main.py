@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title=settings.app_name,
-    description="API para extrair cifras em formato ChordPro a partir de PDFs, imagens e TXT.",
+    description="API para extrair cifras em formato ChordPro a partir de PDFs e TXT.",
     version=settings.app_version,
 )
 

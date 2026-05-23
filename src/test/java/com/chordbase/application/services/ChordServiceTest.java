@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -54,60 +55,56 @@ class ChordServiceTest {
     }
 
     @Test
-    void previewChordStoresImageOcrResult() {
+    void previewChordStoresScannedPdfOcrResult() {
         ChordService service = chordService(file -> extractionResponse(
                 "NEEDS_REVIEW",
-                "OCR_IMAGE",
+                "OCR_PDF",
                 "Amazing grace\n[C]How sweet the sound",
                 0.76,
-                new String[]{"Imagem processada por OCR. Revise o resultado antes de salvar."}
+                new String[]{"PDF sem texto selecionável suficiente. OCR foi utilizado."}
         ));
 
-        var response = service.previewChord(imageFile(), user());
+        var response = service.previewChord(pdfFile(), user());
 
         assertNotNull(response.uuid());
         assertEquals("Amazing grace", response.chordName());
         assertEquals("Amazing grace\n[C]How sweet the sound", response.chordPro());
         Chord saved = chords.get(response.uuid());
-        assertEquals("OCR_IMAGE", saved.getSourceType());
+        assertEquals("OCR_PDF", saved.getSourceType());
         assertEquals(0.76, saved.getConfidence());
     }
 
     @Test
-    void previewChordRejectsFailedImageExtractionWithoutSavingDraft() {
+    void previewChordStoresTextFileResult() {
         ChordService service = chordService(file -> extractionResponse(
-                "FAILED",
-                "OCR_IMAGE",
-                null,
-                0.0,
-                new String[]{"Não foi possível extrair texto do arquivo."}
+                "DONE",
+                "TEXT_FILE",
+                "Amazing grace\n[C]How sweet the sound",
+                0.90,
+                new String[]{"Arquivo TXT processado como texto puro."}
         ));
 
-        IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
-                () -> service.previewChord(imageFile(), user())
-        );
+        var response = service.previewChord(textFile(), user());
 
-        assertEquals("Não foi possível extrair texto do arquivo.", exception.getMessage());
-        assertTrue(chords.isEmpty());
+        assertNotNull(response.uuid());
+        assertEquals("TEXT_FILE", chords.get(response.uuid()).getSourceType());
     }
 
     @Test
-    void previewChordRejectsOcrImageWithoutChordSignalsWithoutSavingDraft() {
-        ChordService service = chordService(file -> extractionResponse(
-                "NEEDS_REVIEW",
-                "OCR_IMAGE",
-                "Lista de compras\nLeite e pao",
-                0.72,
-                new String[]{"Imagem processada por OCR. Revise o resultado antes de salvar."}
-        ));
+    void previewChordRejectsImageWithoutCallingExtractor() {
+        AtomicBoolean called = new AtomicBoolean(false);
+        ChordService service = chordService(file -> {
+            called.set(true);
+            return null;
+        });
 
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
                 () -> service.previewChord(imageFile(), user())
         );
 
-        assertEquals("Não consegui identificar uma cifra nessa imagem. Envie uma foto mais nítida, PDF ou TXT.", exception.getMessage());
+        assertEquals("A importação aceita apenas arquivos PDF ou TXT. Imagens não são suportadas no momento.", exception.getMessage());
+        assertFalse(called.get());
         assertTrue(chords.isEmpty());
     }
 
@@ -167,9 +164,9 @@ class ChordServiceTest {
                 confidence,
                 warnings,
                 new ChordExtractionResponse.Metadata(
-                        "amazing-grace.png",
+                        "amazing-grace.pdf",
                         null,
-                        "image/png",
+                        "application/pdf",
                         1024L,
                         1,
                         chordPro == null ? 0 : 3,
@@ -184,6 +181,24 @@ class ChordServiceTest {
                 "file",
                 "amazing-grace.png",
                 "image/png",
+                new byte[]{1, 2, 3}
+        );
+    }
+
+    private MockMultipartFile pdfFile() {
+        return new MockMultipartFile(
+                "file",
+                "amazing-grace.pdf",
+                "application/pdf",
+                new byte[]{1, 2, 3}
+        );
+    }
+
+    private MockMultipartFile textFile() {
+        return new MockMultipartFile(
+                "file",
+                "amazing-grace.txt",
+                "text/plain",
                 new byte[]{1, 2, 3}
         );
     }

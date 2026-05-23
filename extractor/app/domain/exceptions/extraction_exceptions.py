@@ -43,6 +43,6 @@ class DependencyUnavailableException(ExtractionException):
 class ExtractionBusyException(ExtractionException):
     def __init__(self):
         super().__init__(
-            message="O processamento de imagens está ocupado. Tente novamente em instantes.",
+            message="O processamento de documentos está ocupado. Tente novamente em instantes.",
             code="OCR_BUSY",
         )

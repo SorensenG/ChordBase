@@ -21,16 +21,14 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.regex.Pattern;
 
 @Service
 public class ChordService {
-    private static final String NO_CHORD_IMAGE_MESSAGE = "Não consegui identificar uma cifra nessa imagem. Envie uma foto mais nítida, PDF ou TXT.";
-    private static final Pattern CHORD_MARKER_PATTERN = Pattern.compile("\\[[A-G](?:#|b)?(?:m|maj|min|dim|aug|sus|add|º|°|[0-9()/+#b-])*]");
-    private static final Pattern TONE_METADATA_PATTERN = Pattern.compile("(?im)^(?:tom|key|capo|afina(?:ç|c)ão)\\s*:");
-    private static final Pattern TABLATURE_PATTERN = Pattern.compile("(?im)^[EADGBE]\\|");
+    private static final String UNSUPPORTED_IMPORT_FORMAT_MESSAGE =
+            "A importação aceita apenas arquivos PDF ou TXT. Imagens não são suportadas no momento.";
 
     private final ExternalExtrator externalExtrator;
     private final ChordRepository chordRepository;
@@ -58,16 +56,14 @@ public class ChordService {
             throw new IllegalArgumentException("User must not be null");
         }
 
+        validateImportFile(file);
+
         var microserviceResponse = externalExtrator.extractChordPro(file);
         var chordPro = microserviceResponse.chordPro();
         var fallbackName = file.getOriginalFilename();
 
         if ("FAILED".equalsIgnoreCase(microserviceResponse.status()) || chordPro == null || chordPro.isBlank()) {
             throw new IllegalArgumentException(resolveExtractionFailureMessage(microserviceResponse));
-        }
-
-        if ("OCR_IMAGE".equalsIgnoreCase(microserviceResponse.sourceType()) && !hasChordSignals(chordPro)) {
-            throw new IllegalArgumentException(NO_CHORD_IMAGE_MESSAGE);
         }
 
         if (microserviceResponse.metadata() != null && microserviceResponse.metadata().filename() != null) {
@@ -224,10 +220,18 @@ public class ChordService {
         return "Não foi possível extrair texto do arquivo.";
     }
 
-    private boolean hasChordSignals(String chordPro) {
-        return CHORD_MARKER_PATTERN.matcher(chordPro).find()
-                || TONE_METADATA_PATTERN.matcher(chordPro).find()
-                || TABLATURE_PATTERN.matcher(chordPro).find();
+    private void validateImportFile(MultipartFile file) {
+        String filename = Optional.ofNullable(file.getOriginalFilename()).orElse("").toLowerCase(Locale.ROOT);
+        String contentType = Optional.ofNullable(file.getContentType()).orElse("").toLowerCase(Locale.ROOT);
+        boolean unspecifiedContentType = contentType.isBlank() || "application/octet-stream".equals(contentType);
+        boolean pdf = filename.endsWith(".pdf")
+                && (unspecifiedContentType || "application/pdf".equals(contentType));
+        boolean text = filename.endsWith(".txt")
+                && (unspecifiedContentType || "text/plain".equals(contentType));
+
+        if (!pdf && !text) {
+            throw new IllegalArgumentException(UNSUPPORTED_IMPORT_FORMAT_MESSAGE);
+        }
     }
 
     private Chord findChordByUuid(UUID chordUuid) {
