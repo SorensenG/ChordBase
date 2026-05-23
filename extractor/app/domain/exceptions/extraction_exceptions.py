@@ -38,3 +38,11 @@ class DependencyUnavailableException(ExtractionException):
             code="DEPENDENCY_UNAVAILABLE",
             details={"dependency": dependency},
         )
+
+
+class ExtractionBusyException(ExtractionException):
+    def __init__(self):
+        super().__init__(
+            message="O processamento de imagens está ocupado. Tente novamente em instantes.",
+            code="OCR_BUSY",
+        )

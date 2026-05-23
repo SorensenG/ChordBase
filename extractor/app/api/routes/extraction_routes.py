@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from pathlib import Path
+from time import perf_counter
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Request, UploadFile
@@ -11,7 +13,11 @@ from app.application.services.chordpro_extraction_service import (
     ChordproExtractionService,
 )
 from app.config import settings
-from app.domain.exceptions.extraction_exceptions import UploadValidationException
+from app.domain.exceptions.extraction_exceptions import (
+    ExtractionBusyException,
+    UploadValidationException,
+)
+from app.domain.models.extraction_result import ExtractionResult
 from app.infrastructure.files.temporary_file_handler import (
     remove_temp_file,
     save_upload_to_temp_file,
@@ -20,6 +26,7 @@ from app.presentation.schemas.extraction_response import ExtractionResponse
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+extraction_semaphore = asyncio.Semaphore(settings.ocr_max_concurrent_jobs)
 
 
 @router.post("/chordpro", response_model=ExtractionResponse)
@@ -40,7 +47,8 @@ async def extract_chordpro(
         )
         temp_path = temp_file.path
 
-        result = service.extract(
+        result = await run_extraction_with_resource_limit(
+            service=service,
             file_path=temp_file.path,
             filename=file.filename,
             mime_type=file.content_type,
@@ -64,6 +72,55 @@ async def extract_chordpro(
     finally:
         if temp_path:
             remove_temp_file(temp_path)
+
+
+async def run_extraction_with_resource_limit(
+    service: ChordproExtractionService,
+    file_path: str,
+    filename: Optional[str],
+    mime_type: Optional[str],
+    file_size_bytes: int,
+    request_id: str,
+) -> ExtractionResult:
+    if (mime_type or "").lower() == "text/plain":
+        return await asyncio.to_thread(
+            service.extract,
+            file_path,
+            filename,
+            mime_type,
+            file_size_bytes,
+            request_id,
+        )
+
+    waiting_started = perf_counter()
+    try:
+        await asyncio.wait_for(
+            extraction_semaphore.acquire(),
+            timeout=settings.ocr_queue_timeout_seconds,
+        )
+    except asyncio.TimeoutError as exception:
+        logger.warning(
+            "Extraction queue timed out",
+            extra={"request_id": request_id, "mime_type": mime_type},
+        )
+        raise ExtractionBusyException() from exception
+
+    wait_ms = round((perf_counter() - waiting_started) * 1000)
+    logger.info(
+        "Extraction slot acquired",
+        extra={"request_id": request_id, "mime_type": mime_type, "queue_wait_ms": wait_ms},
+    )
+    try:
+        return await asyncio.to_thread(
+            service.extract,
+            file_path,
+            filename,
+            mime_type,
+            file_size_bytes,
+            request_id,
+        )
+    finally:
+        extraction_semaphore.release()
 
 
 def validate_upload_metadata(file: UploadFile) -> None:

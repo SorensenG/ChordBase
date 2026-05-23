@@ -3,8 +3,10 @@ package com.chordbase.infra.external;
 import com.chordbase.presentation.Dtos.Chord.ChordExtractionResponse;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -21,6 +23,7 @@ import java.util.UUID;
 
 @Component
 public class ChordExtratorConnector implements ExternalExtrator {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ChordExtratorConnector.class);
     private final RestClient client;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final String extractionPath;
@@ -41,22 +44,30 @@ public class ChordExtratorConnector implements ExternalExtrator {
     @Override
     public ChordExtractionResponse extractChordPro(MultipartFile file) {
         try {
-            ByteArrayResource fileResource = new ByteArrayResource(file.getBytes()) {
+            InputStreamResource fileResource = new InputStreamResource(file.getInputStream()) {
                 @Override
                 public String getFilename() {
                     return file.getOriginalFilename();
+                }
+
+                @Override
+                public long contentLength() {
+                    return file.getSize();
                 }
             };
 
             HttpHeaders fileHeaders = new HttpHeaders();
             fileHeaders.setContentType(resolveContentType(file));
 
-            HttpEntity<ByteArrayResource> filePart = new HttpEntity<>(fileResource, fileHeaders);
+            HttpEntity<InputStreamResource> filePart = new HttpEntity<>(fileResource, fileHeaders);
 
             MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
             body.add("file", filePart);
 
-            return client.post()
+            LOGGER.info("Forwarding chord upload to extractor: filename={}, contentType={}, bytes={}",
+                    file.getOriginalFilename(), file.getContentType(), file.getSize());
+
+            ChordExtractionResponse response = client.post()
                     .uri(extractionPath)
                     .header("X-Request-ID", UUID.randomUUID().toString())
                     .contentType(MediaType.MULTIPART_FORM_DATA)
@@ -64,6 +75,12 @@ public class ChordExtratorConnector implements ExternalExtrator {
                     .retrieve()
                     .body(ChordExtractionResponse.class);
 
+            LOGGER.info("Chord extractor completed: filename={}, sourceType={}, status={}",
+                    file.getOriginalFilename(),
+                    response == null ? null : response.sourceType(),
+                    response == null ? null : response.status());
+
+            return response;
         } catch (IOException exception) {
             throw new IllegalArgumentException("Erro ao ler arquivo enviado.", exception);
         } catch (RestClientResponseException exception) {

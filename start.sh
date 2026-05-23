@@ -3,6 +3,7 @@ set -Eeuo pipefail
 
 export CHORDPRO_EXTRACTOR_BASE_URL="http://127.0.0.1:8000"
 export SERVER_PORT="${PORT:-8080}"
+JAVA_MEMORY_OPTS="${JAVA_MEMORY_OPTS:--Xms64m -Xmx192m -XX:+ExitOnOutOfMemoryError}"
 
 extractor_pid=""
 java_pid=""
@@ -26,7 +27,7 @@ cd /app/extractor
 uvicorn app.main:app --host 127.0.0.1 --port 8000 --proxy-headers &
 extractor_pid=$!
 
-java -jar /app/app.jar &
+java ${JAVA_MEMORY_OPTS} -jar /app/app.jar &
 java_pid=$!
 
 set +e

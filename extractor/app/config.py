@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     ocr_page_segmentation_mode: int = 6
     ocr_min_confidence: float = 0.30
     ocr_timeout_seconds: int = 45
+    ocr_max_pixels: int = 4_000_000
+    ocr_max_edge: int = 2_400
+    ocr_max_source_pixels: int = 16_000_000
+    ocr_max_concurrent_jobs: int = 1
+    ocr_queue_timeout_seconds: int = 60
 
     review_confidence_threshold: float = 0.85
     allowed_mime_types_csv: str = Field(
