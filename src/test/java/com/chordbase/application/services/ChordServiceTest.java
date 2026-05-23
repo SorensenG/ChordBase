@@ -15,6 +15,7 @@ import org.springframework.mock.web.MockMultipartFile;
 
 import java.lang.reflect.Proxy;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,6 +39,16 @@ class ChordServiceTest {
                 yield chord;
             }
             case "findById" -> Optional.ofNullable(chords.get((UUID) args[0]));
+            case "findByNameContainingIgnoreCaseAndStatusAndOwner_UuidNot" -> {
+                String name = ((String) args[0]).toLowerCase();
+                String status = (String) args[1];
+                UUID ownerUuid = (UUID) args[2];
+                yield chords.values().stream()
+                        .filter(chord -> chord.getName().toLowerCase().contains(name))
+                        .filter(chord -> status.equals(chord.getStatus()))
+                        .filter(chord -> chord.getOwner() != null && !ownerUuid.equals(chord.getOwner().getUuid()))
+                        .toList();
+            }
             default -> throw new UnsupportedOperationException(method.getName());
         });
     }
@@ -100,6 +111,38 @@ class ChordServiceTest {
         assertTrue(chords.isEmpty());
     }
 
+    @Test
+    void searchChordReturnsPublishedChordOwnedByAnotherUser() {
+        User authenticatedUser = user("user@example.com", "gabriel");
+        storeChord("Vento", "PUBLISHED", user("other@example.com", "outro"));
+
+        List<?> result = chordService(file -> null).findChord("vento", authenticatedUser);
+
+        assertEquals(1, result.size());
+    }
+
+    @Test
+    void searchChordOmitsPublishedChordOwnedByAuthenticatedUser() {
+        User authenticatedUser = user("user@example.com", "gabriel");
+        storeChord("Vento", "PUBLISHED", authenticatedUser);
+
+        List<?> result = chordService(file -> null).findChord("vento", authenticatedUser);
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void searchChordOmitsDraftAndDeletedChords() {
+        User authenticatedUser = user("user@example.com", "gabriel");
+        User otherUser = user("other@example.com", "outro");
+        storeChord("Vento draft", "DRAFT", otherUser);
+        storeChord("Vento deleted", "DELETED", otherUser);
+
+        List<?> result = chordService(file -> null).findChord("vento", authenticatedUser);
+
+        assertTrue(result.isEmpty());
+    }
+
     private ChordService chordService(ExternalExtrator externalExtrator) {
         return new ChordService(
                 externalExtrator,
@@ -146,11 +189,27 @@ class ChordServiceTest {
     }
 
     private User user() {
+        return user("user@example.com", "gabriel");
+    }
+
+    private User user(String email, String name) {
         return User.builder()
                 .uuid(UUID.randomUUID())
-                .email(EmailAddress.of("user@example.com"))
-                .userName(UserName.of("gabriel"))
+                .email(EmailAddress.of(email))
+                .userName(UserName.of(name))
                 .build();
+    }
+
+    private void storeChord(String name, String status, User owner) {
+        Chord chord = Chord.builder()
+                .uuid(UUID.randomUUID())
+                .name(name)
+                .artist("Artista")
+                .addByUser(owner.getUserName())
+                .owner(owner)
+                .status(status)
+                .build();
+        chords.put(chord.getUuid(), chord);
     }
 
     @SuppressWarnings("unchecked")

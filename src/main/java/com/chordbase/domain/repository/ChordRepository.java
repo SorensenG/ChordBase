@@ -11,7 +11,7 @@ import java.util.UUID;
 
 @Repository
 public interface ChordRepository extends JpaRepository<Chord, UUID> {
-    List<Chord> findByNameContainingIgnoreCaseAndStatus(String name, String status);
+    List<Chord> findByNameContainingIgnoreCaseAndStatusAndOwner_UuidNot(String name, String status, UUID ownerUuid);
 
     List<Chord> findByOwner_UuidAndStatusNotOrderByNameAsc(UUID ownerUuid, String status);
 

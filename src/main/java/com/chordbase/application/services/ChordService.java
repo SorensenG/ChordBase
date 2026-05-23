@@ -174,8 +174,16 @@ public class ChordService {
     }
 
     @Transactional(readOnly = true)
-    public List<SimpleChordVizualizationResponse> findChord(String chordName) {
-        List<Chord> chords = chordRepository.findByNameContainingIgnoreCaseAndStatus(chordName, ChordStatus.PUBLISHED.name());
+    public List<SimpleChordVizualizationResponse> findChord(String chordName, User user) {
+        if (user == null) {
+            throw new IllegalArgumentException("User must not be null");
+        }
+
+        List<Chord> chords = chordRepository.findByNameContainingIgnoreCaseAndStatusAndOwner_UuidNot(
+                chordName,
+                ChordStatus.PUBLISHED.name(),
+                user.getUuid()
+        );
 
         return toSimpleChordResponse(chords);
     }

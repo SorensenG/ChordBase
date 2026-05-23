@@ -66,9 +66,11 @@ public class ChordController {
 
 
     @GetMapping("/search")
-    public ResponseEntity<List<SimpleChordVizualizationResponse>> searchChord(@RequestParam String chordName) {
+    public ResponseEntity<List<SimpleChordVizualizationResponse>> searchChord(@AuthenticationPrincipal UserDetailsImp userImp, @RequestParam String chordName) {
 
-        var chord = chordService.findChord(chordName);
+        User user = authenticatedUserResolver.resolve(userImp);
+
+        var chord = chordService.findChord(chordName, user);
 
         return ResponseEntity.status(HttpStatus.OK).body(chord);
     }
