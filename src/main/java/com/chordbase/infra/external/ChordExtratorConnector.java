@@ -84,6 +84,13 @@ public class ChordExtratorConnector implements ExternalExtrator {
         } catch (IOException exception) {
             throw new IllegalArgumentException("Erro ao ler arquivo enviado.", exception);
         } catch (RestClientResponseException exception) {
+            if (exception.getStatusCode().value() == 503) {
+                throw new ExtractorBusyException(
+                        resolveExtractorMessage(exception),
+                        exception.getResponseHeaders().getFirst(HttpHeaders.RETRY_AFTER),
+                        exception
+                );
+            }
             throw new IllegalArgumentException(resolveExtractorMessage(exception), exception);
         }
     }

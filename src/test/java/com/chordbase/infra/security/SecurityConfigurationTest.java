@@ -7,12 +7,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 class SecurityConfigurationTest {
 
     @Test
-    void allowsCurrentCloudflareQuickTunnelOrigins() {
+    void allowsOnlyKnownProductionOriginByDefault() {
         assertThat(SecurityConfiguration.isAllowedCorsOrigin(
-                "https://orange-per-economy-unified.trycloudflare.com"
-        )).isTrue();
-        assertThat(SecurityConfiguration.isAllowedCorsOrigin(
-                "https://motorola-couples-wait-remarkable.trycloudflare.com"
+                "https://chordbase-front.vercel.app"
         )).isTrue();
     }
 
@@ -26,6 +23,8 @@ class SecurityConfigurationTest {
     @Test
     void rejectsUnlistedOrigins() {
         assertThat(SecurityConfiguration.isAllowedCorsOrigin("https://example.com")).isFalse();
+        assertThat(SecurityConfiguration.isAllowedCorsOrigin("https://temporary.trycloudflare.com")).isFalse();
+        assertThat(SecurityConfiguration.isAllowedCorsOrigin("https://chordbase-front-branch.vercel.app")).isFalse();
         assertThat(SecurityConfiguration.isAllowedCorsOrigin("https://trycloudflare.com.evil.test")).isFalse();
         assertThat(SecurityConfiguration.isAllowedCorsOrigin(null)).isFalse();
     }

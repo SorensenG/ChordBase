@@ -78,6 +78,89 @@ class UserProfileFlowTest {
     }
 
     @Test
+    void registerIgnoresClientSuppliedAdminRole() throws Exception {
+        mockMvc.perform(post("/users/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "userName": "ordinary.user",
+                                  "email": "ordinary@example.com",
+                                  "password": "secret123",
+                                  "role": "ROLE_ADMIN"
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.roles[0]").value("ROLE_USER"));
+
+        String loginJson = mockMvc.perform(post("/users/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "ordinary@example.com",
+                                  "password": "secret123"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String accessToken = objectMapper.readTree(loginJson).get("accessToken").asText();
+
+        mockMvc.perform(get("/admin/users").header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void registerAcceptsNewPayloadWithoutRole() throws Exception {
+        mockMvc.perform(post("/users/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "userName": "new.client",
+                                  "email": "new.client@example.com",
+                                  "password": "secret123"
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.roles[0]").value("ROLE_USER"));
+    }
+
+    @Test
+    void updateProfileRejectsExternalAvatarBeacon() throws Exception {
+        mockMvc.perform(post("/users/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "userName": "avatar.user",
+                                  "email": "avatar@example.com",
+                                  "password": "secret123"
+                                }
+                                """))
+                .andExpect(status().isCreated());
+
+        String loginJson = mockMvc.perform(post("/users/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "avatar@example.com",
+                                  "password": "secret123"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String accessToken = objectMapper.readTree(loginJson).get("accessToken").asText();
+
+        mockMvc.perform(put("/users/me/profile")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "profileImageUrl": "https://attacker.example/avatar.png",
+                                  "description": null
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void updateProfileChangesDescription() throws Exception {
         mockMvc.perform(post("/users/register")
                         .contentType(MediaType.APPLICATION_JSON)

@@ -55,6 +55,7 @@ class GoogleLoginFlowTest {
         String googleName = "Novo " + uniqueNamePart;
         String expectedUserName = "novo." + uniqueNamePart;
         googleIdTokenVerifier.account = new GoogleAccount(
+                "google-sub-new-" + uniqueNamePart,
                 "New.Google." + uniqueNamePart + "@Example.COM",
                 true,
                 googleName,
@@ -80,6 +81,7 @@ class GoogleLoginFlowTest {
 
         var savedUser = userRepository.findByEmail("new.google." + uniqueNamePart + "@example.com").orElseThrow();
         assertThat(savedUser.getProfileImageUrl()).isEqualTo("https://lh3.googleusercontent.com/avatar");
+        assertThat(savedUser.getGoogleSubject()).isEqualTo("google-sub-new-" + uniqueNamePart);
         assertThat(savedUser.getPasswordHash()).isNotBlank();
 
         String accessToken = objectMapper.readTree(loginJson).get("accessToken").asText();
@@ -94,6 +96,7 @@ class GoogleLoginFlowTest {
     void googleLoginReusesExistingUserWithSameVerifiedEmail() throws Exception {
         User existingUser = saveUser("existing.google", "existing.google@example.com", true);
         googleIdTokenVerifier.account = new GoogleAccount(
+                "google-sub-existing",
                 "existing.google@example.com",
                 true,
                 "Different Google Name",
@@ -110,11 +113,15 @@ class GoogleLoginFlowTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.uuid").value(existingUser.getUuid().toString()))
                 .andExpect(jsonPath("$.userName").value("existing.google"));
+
+        assertThat(userRepository.findById(existingUser.getUuid()).orElseThrow().getGoogleSubject())
+                .isEqualTo("google-sub-existing");
     }
 
     @Test
     void googleLoginRejectsUnverifiedEmail() throws Exception {
         googleIdTokenVerifier.account = new GoogleAccount(
+                "google-sub-unverified",
                 "unverified@example.com",
                 false,
                 "Unverified User",
@@ -135,6 +142,7 @@ class GoogleLoginFlowTest {
     void googleLoginRejectsInactiveExistingUser() throws Exception {
         saveUser("inactive.google", "inactive.google@example.com", false);
         googleIdTokenVerifier.account = new GoogleAccount(
+                "google-sub-inactive",
                 "inactive.google@example.com",
                 true,
                 "Inactive Google",
@@ -155,6 +163,7 @@ class GoogleLoginFlowTest {
     void googleLoginAddsSuffixWhenGeneratedUsernameExists() throws Exception {
         saveUser("novo.musico", "novo.musico.owner@example.com", true);
         googleIdTokenVerifier.account = new GoogleAccount(
+                "google-sub-suffix",
                 "suffix.google@example.com",
                 true,
                 "Novo Musico",
@@ -170,6 +179,34 @@ class GoogleLoginFlowTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.userName").value("novo.musico.1"));
+    }
+
+    @Test
+    void googleLoginRejectsDifferentSubjectForLinkedEmail() throws Exception {
+        userRepository.save(User.builder()
+                .userName(UserName.of("linked.google"))
+                .email(EmailAddress.of("linked.google@example.com"))
+                .passwordHash("hashed-password")
+                .roles(List.of(Role.builder().role(UserRole.ROLE_USER).build()))
+                .googleSubject("google-sub-original")
+                .active(true)
+                .build());
+        googleIdTokenVerifier.account = new GoogleAccount(
+                "google-sub-attacker",
+                "linked.google@example.com",
+                true,
+                "Linked Google",
+                null
+        );
+
+        mockMvc.perform(post("/users/google")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "idToken": "valid-google-id-token"
+                                }
+                                """))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -206,7 +243,7 @@ class GoogleLoginFlowTest {
     }
 
     static class FakeGoogleIdTokenVerifier implements GoogleIdTokenVerifier {
-        private GoogleAccount account = new GoogleAccount("user@example.com", true, "User", null);
+        private GoogleAccount account = new GoogleAccount("google-sub-user", "user@example.com", true, "User", null);
         private RuntimeException exception;
 
         @Override
@@ -218,7 +255,7 @@ class GoogleLoginFlowTest {
         }
 
         void reset() {
-            account = new GoogleAccount("user@example.com", true, "User", null);
+            account = new GoogleAccount("google-sub-user", "user@example.com", true, "User", null);
             exception = null;
         }
     }

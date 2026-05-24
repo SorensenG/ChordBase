@@ -5,6 +5,7 @@ import com.chordbase.domain.entities.User;
 import com.chordbase.domain.repository.UserRepository;
 import com.chordbase.domain.valueobjects.EmailAddress;
 import com.chordbase.domain.valueobjects.UserName;
+import com.chordbase.domain.valueobjects.UserRole;
 import com.chordbase.infra.security.JwtTokenService;
 import com.chordbase.infra.security.SecurityConfiguration;
 import com.chordbase.infra.security.UserDetailsImp;
@@ -34,6 +35,13 @@ import java.util.Locale;
 @Service
 public class UserService {
     private static final int MAX_DESCRIPTION_LENGTH = 500;
+    private static final int MAX_PROFILE_IMAGE_URL_LENGTH = 2_000_000;
+    private static final List<String> PROFILE_DATA_IMAGE_PREFIXES = List.of(
+            "data:image/png;base64,",
+            "data:image/jpeg;base64,",
+            "data:image/webp;base64,"
+    );
+    private static final String GOOGLE_PROFILE_IMAGE_PREFIX = "https://lh3.googleusercontent.com/";
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     final private AuthenticationManager authenticationManager;
@@ -71,7 +79,7 @@ public class UserService {
                 .userName(userName)
                 .email(email)
                 .passwordHash(securityConfiguration.passwordEncoder().encode(request.password()))
-                .roles(List.of(Role.builder().role(request.role()).build()))
+                .roles(List.of(Role.builder().role(UserRole.ROLE_USER).build()))
                 .profileImageUrl(normalizeProfileImageUrl(request.profileImageUrl()))
                 .description(normalizeDescription(request.description()))
                 .active(true)
@@ -130,11 +138,14 @@ public class UserService {
         }
 
         EmailAddress email = EmailAddress.of(googleAccount.email());
-        User user = userRepository.findByEmail(email.value())
-                .orElseGet(() -> createGoogleUser(email, googleAccount));
+        User user = userRepository.findByGoogleSubject(googleAccount.subject())
+                .orElseGet(() -> linkOrCreateGoogleUser(email, googleAccount));
 
         if (!user.isActive()) {
             throw new BadCredentialsException("User account is inactive");
+        }
+        if (!email.value().equals(user.getEmail())) {
+            throw new BadCredentialsException("Google account does not match the linked user.");
         }
 
         return createLoginResponse(user);
@@ -221,10 +232,28 @@ public class UserService {
                 .roles(List.of(Role.builder().role(com.chordbase.domain.valueobjects.UserRole.ROLE_USER).build()))
                 .profileImageUrl(normalizeProfileImageUrl(googleAccount.pictureUrl()))
                 .description(null)
+                .googleSubject(googleAccount.subject())
                 .active(true)
                 .build();
 
         return userRepository.save(user);
+    }
+
+    private User linkOrCreateGoogleUser(EmailAddress email, GoogleIdTokenVerifier.GoogleAccount googleAccount) {
+        return userRepository.findByEmail(email.value())
+                .map(existingUser -> linkGoogleSubject(existingUser, googleAccount.subject()))
+                .orElseGet(() -> createGoogleUser(email, googleAccount));
+    }
+
+    private User linkGoogleSubject(User user, String googleSubject) {
+        if (user.getGoogleSubject() != null && !user.getGoogleSubject().equals(googleSubject)) {
+            throw new BadCredentialsException("Google account does not match the linked user.");
+        }
+        if (user.getGoogleSubject() == null) {
+            user.setGoogleSubject(googleSubject);
+            return userRepository.save(user);
+        }
+        return user;
     }
 
     private LoginResponse createLoginResponse(User user) {
@@ -319,7 +348,16 @@ public class UserService {
             return null;
         }
 
-        return profileImageUrl.trim();
+        String normalized = profileImageUrl.trim();
+        if (normalized.length() > MAX_PROFILE_IMAGE_URL_LENGTH) {
+            throw new IllegalArgumentException("Profile image must not exceed 2000000 characters");
+        }
+        boolean supportedDataImage = PROFILE_DATA_IMAGE_PREFIXES.stream().anyMatch(normalized::startsWith);
+        boolean trustedGoogleImage = normalized.startsWith(GOOGLE_PROFILE_IMAGE_PREFIX);
+        if (!supportedDataImage && !trustedGoogleImage) {
+            throw new IllegalArgumentException("Profile image must be an uploaded image or trusted Google avatar");
+        }
+        return normalized;
     }
 
     private String normalizeDescription(String description) {

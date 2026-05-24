@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 
+from app.config import settings
 from app.domain.exceptions.extraction_exceptions import ExtractionException
 from app.domain.models.extracted_token import ExtractedToken
 
@@ -17,7 +18,13 @@ def extract_tokens_from_text_file(file_path: str) -> list[ExtractedToken]:
     tokens: list[ExtractedToken] = []
 
     for line_index, line_text in enumerate(text.splitlines()):
-        tokens.extend(_extract_line_tokens(line_text=line_text, line_index=line_index))
+        tokens.extend(
+            _extract_line_tokens(
+                line_text=line_text,
+                line_index=line_index,
+                remaining_tokens=settings.text_max_tokens - len(tokens),
+            )
+        )
 
     logger.info("Text file extraction finished", extra={"token_count": len(tokens)})
     return tokens
@@ -42,11 +49,16 @@ def _read_text_file(file_path: str) -> str:
     )
 
 
-def _extract_line_tokens(line_text: str, line_index: int) -> list[ExtractedToken]:
+def _extract_line_tokens(line_text: str, line_index: int, remaining_tokens: int) -> list[ExtractedToken]:
     tokens: list[ExtractedToken] = []
     cursor = 0
 
     for raw_token in line_text.split():
+        if len(tokens) >= remaining_tokens:
+            raise ExtractionException(
+                message="O arquivo TXT possui tokens demais para processamento seguro.",
+                code="TEXT_TOKEN_LIMIT_EXCEEDED",
+            )
         start_index = line_text.find(raw_token, cursor)
 
         if start_index < 0:

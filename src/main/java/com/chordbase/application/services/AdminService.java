@@ -25,13 +25,15 @@ public class AdminService {
     private final SetlistRepository setlistRepository;
     private final SetlistService setlistService;
     private final ChordMetadataResolver chordMetadataResolver;
+    private final RefreshTokenService refreshTokenService;
 
-    public AdminService(UserRepository userRepository, ChordRepository chordRepository, SetlistRepository setlistRepository, SetlistService setlistService, ChordMetadataResolver chordMetadataResolver) {
+    public AdminService(UserRepository userRepository, ChordRepository chordRepository, SetlistRepository setlistRepository, SetlistService setlistService, ChordMetadataResolver chordMetadataResolver, RefreshTokenService refreshTokenService) {
         this.userRepository = userRepository;
         this.chordRepository = chordRepository;
         this.setlistRepository = setlistRepository;
         this.setlistService = setlistService;
         this.chordMetadataResolver = chordMetadataResolver;
+        this.refreshTokenService = refreshTokenService;
     }
 
     @Transactional(readOnly = true)
@@ -69,6 +71,9 @@ public class AdminService {
         User target = userRepository.findById(userUuid)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userUuid));
         target.setActive(!Boolean.FALSE.equals(active));
+        if (!target.isActive()) {
+            refreshTokenService.revokeAllForUser(target);
+        }
 
         return toAdminUserResponse(userRepository.save(target));
     }
@@ -92,7 +97,7 @@ public class AdminService {
     }
 
     private void validateAdmin(User user) {
-        if (!isAdmin(user)) {
+        if (user == null || !user.isActive() || !isAdmin(user)) {
             throw new AccessDeniedException("Admin access required");
         }
     }

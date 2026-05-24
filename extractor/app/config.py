@@ -26,7 +26,14 @@ class Settings(BaseSettings):
     ocr_max_edge: int = 2_400
     ocr_max_source_pixels: int = 16_000_000
     ocr_max_concurrent_jobs: int = 1
-    ocr_queue_timeout_seconds: int = 60
+    ocr_max_pending_jobs: int = 2
+    ocr_admission_timeout_seconds: float = 0.1
+    ocr_queue_timeout_seconds: int = 10
+    ocr_retry_after_seconds: int = 2
+    pdf_max_rendered_pixels_per_page: int = 16_000_000
+    pdf_max_rendered_pixels_document: int = 40_000_000
+    text_max_tokens: int = 100_000
+    max_chordpro_output_bytes: int = 2_000_000
 
     review_confidence_threshold: float = 0.85
     allowed_mime_types_csv: str = Field(
@@ -34,7 +41,7 @@ class Settings(BaseSettings):
         description="Comma-separated list of accepted upload MIME types.",
     )
     allowed_extensions_csv: str = ".pdf,.txt"
-    cors_allowed_origins_csv: str = "*"
+    cors_allowed_origins_csv: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",

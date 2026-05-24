@@ -1,7 +1,9 @@
 package com.chordbase.presentation.handlers;
 
 import com.auth0.jwt.exceptions.JWTVerificationException;
+import com.chordbase.infra.external.ExtractorBusyException;
 import com.chordbase.presentation.Dtos.Error.ErrorResponse;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -42,5 +44,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleMaxUploadSizeExceeded() {
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
                 .body(new ErrorResponse("Arquivo excede o tamanho máximo permitido."));
+    }
+
+    @ExceptionHandler(ExtractorBusyException.class)
+    public ResponseEntity<ErrorResponse> handleExtractorBusy(ExtractorBusyException exception) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .header(HttpHeaders.RETRY_AFTER, exception.getRetryAfter())
+                .body(new ErrorResponse(exception.getMessage()));
     }
 }

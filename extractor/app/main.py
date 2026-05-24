@@ -11,6 +11,7 @@ from app.api.routes.extraction_routes import router as extraction_router
 from app.api.routes.health_routes import router as health_router
 from app.config import settings
 from app.domain.exceptions.extraction_exceptions import (
+    ExtractionBusyException,
     ExtractionException,
     UploadValidationException,
 )
@@ -67,6 +68,19 @@ async def upload_validation_exception_handler(
 async def extraction_exception_handler(request: Request, exception: ExtractionException):
     return JSONResponse(
         status_code=422,
+        content={
+            "requestId": request.state.request_id,
+            "code": exception.code,
+            "message": exception.message,
+            "details": exception.details,
+        },
+    )
+
+@app.exception_handler(ExtractionBusyException)
+async def extraction_busy_exception_handler(request: Request, exception: ExtractionBusyException):
+    return JSONResponse(
+        status_code=503,
+        headers={"Retry-After": str(settings.ocr_retry_after_seconds)},
         content={
             "requestId": request.state.request_id,
             "code": exception.code,

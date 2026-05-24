@@ -14,6 +14,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -44,12 +45,22 @@ public class RefreshTokenService {
 
     @Transactional
     public RefreshTokenRotation rotate(String rawRefreshToken) {
-        RefreshToken currentToken = validate(rawRefreshToken);
+        RefreshToken currentToken = validateForRotation(rawRefreshToken);
         currentToken.setRevokedAt(Instant.now());
 
         String newRefreshToken = createRefreshToken(currentToken.getUser());
 
         return new RefreshTokenRotation(currentToken.getUser(), newRefreshToken);
+    }
+
+    @Transactional
+    public void revokeAllForUser(User user) {
+        if (user == null || user.getUuid() == null) {
+            return;
+        }
+        Instant revokedAt = Instant.now();
+        List<RefreshToken> tokens = refreshTokenRepository.findByUser_UuidAndRevokedAtIsNull(user.getUuid());
+        tokens.forEach(token -> token.setRevokedAt(revokedAt));
     }
 
     @Transactional
@@ -67,20 +78,18 @@ public class RefreshTokenService {
         }
     }
 
-    private RefreshToken validate(String rawRefreshToken) {
+    private RefreshToken validateForRotation(String rawRefreshToken) {
         if (rawRefreshToken == null || rawRefreshToken.isBlank()) {
             throw new BadCredentialsException("Refresh token ausente.");
         }
 
         DecodedJWT decodedJWT = jwtTokenService.verifyRefreshToken(rawRefreshToken);
-
-        RefreshToken refreshToken = refreshTokenRepository.findByTokenHash(hash(rawRefreshToken))
+        RefreshToken refreshToken = refreshTokenRepository.findByTokenHashForUpdate(hash(rawRefreshToken))
                 .orElseThrow(() -> new BadCredentialsException("Refresh token inválido."));
 
-        if (!refreshToken.isActive(Instant.now())) {
-            throw new BadCredentialsException("Refresh token expirado ou revogado.");
+        if (!refreshToken.isActive(Instant.now()) || !refreshToken.getUser().isActive()) {
+            throw new BadCredentialsException("Refresh token expirado, revogado ou usuário inativo.");
         }
-
         if (!refreshToken.getUser().getEmail().equals(decodedJWT.getSubject())) {
             throw new BadCredentialsException("Refresh token inválido.");
         }

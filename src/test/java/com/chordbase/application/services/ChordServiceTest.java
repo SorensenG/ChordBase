@@ -12,6 +12,8 @@ import com.chordbase.presentation.Dtos.Chord.ChordExtractionResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.lang.reflect.Proxy;
 import java.util.HashMap;
@@ -140,6 +142,25 @@ class ChordServiceTest {
         assertTrue(result.isEmpty());
     }
 
+    @Test
+    void getChordHidesDeletedChordFromOwnerAndOtherUsers() {
+        User owner = user("owner@example.com", "owner");
+        Chord deleted = storeChord("Segredo", "DELETED", owner);
+        ChordService service = chordService(file -> null);
+
+        ResponseStatusException ownerError = assertThrows(
+                ResponseStatusException.class,
+                () -> service.getChord(deleted.getUuid(), owner)
+        );
+        ResponseStatusException otherError = assertThrows(
+                ResponseStatusException.class,
+                () -> service.getChord(deleted.getUuid(), user())
+        );
+
+        assertEquals(HttpStatus.NOT_FOUND, ownerError.getStatusCode());
+        assertEquals(HttpStatus.NOT_FOUND, otherError.getStatusCode());
+    }
+
     private ChordService chordService(ExternalExtrator externalExtrator) {
         return new ChordService(
                 externalExtrator,
@@ -215,7 +236,7 @@ class ChordServiceTest {
                 .build();
     }
 
-    private void storeChord(String name, String status, User owner) {
+    private Chord storeChord(String name, String status, User owner) {
         Chord chord = Chord.builder()
                 .uuid(UUID.randomUUID())
                 .name(name)
@@ -225,6 +246,7 @@ class ChordServiceTest {
                 .status(status)
                 .build();
         chords.put(chord.getUuid(), chord);
+        return chord;
     }
 
     @SuppressWarnings("unchecked")

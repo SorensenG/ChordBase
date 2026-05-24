@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -37,6 +38,9 @@ public class UserAuthenticationFilter extends OncePerRequestFilter {
                     String subject = jwtTokenService.getSubjectFromAccessToken(token);
                     User user = userRepository.findByEmail(subject)
                             .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado."));
+                    if (!user.isActive()) {
+                        throw new BadCredentialsException("User account is inactive");
+                    }
                     UserDetailsImp userDetails = new UserDetailsImp(user);
 
                     Authentication authentication =

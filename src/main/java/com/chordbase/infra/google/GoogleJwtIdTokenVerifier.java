@@ -47,16 +47,20 @@ public class GoogleJwtIdTokenVerifier implements GoogleIdTokenVerifier {
         validateAudience(jwt);
         validateExpiration(jwt);
 
+        String subject = jwt.getSubject();
         String email = jwt.getClaimAsString("email");
         Boolean emailVerified = jwt.getClaimAsBoolean("email_verified");
         String name = jwt.getClaimAsString("name");
         String pictureUrl = jwt.getClaimAsString("picture");
 
+        if (subject == null || subject.isBlank()) {
+            throw new BadCredentialsException("Google idToken sem subject.");
+        }
         if (email == null || email.isBlank()) {
             throw new BadCredentialsException("Google idToken sem email.");
         }
 
-        return new GoogleAccount(email, Boolean.TRUE.equals(emailVerified), name, pictureUrl);
+        return new GoogleAccount(subject, email, Boolean.TRUE.equals(emailVerified), name, pictureUrl);
     }
 
     private void validateIssuer(Jwt jwt) {

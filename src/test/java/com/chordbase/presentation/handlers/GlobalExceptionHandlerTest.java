@@ -1,6 +1,8 @@
 package com.chordbase.presentation.handlers;
 
+import com.chordbase.infra.external.ExtractorBusyException;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 
 import java.io.IOException;
@@ -22,6 +24,18 @@ class GlobalExceptionHandlerTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().message())
                 .isEqualTo("Arquivo excede o tamanho máximo permitido.");
+    }
+
+    @Test
+    void preservesExtractorRetryAfterWhenCapacityIsExhausted() {
+        var handler = new GlobalExceptionHandler();
+
+        var response = handler.handleExtractorBusy(new ExtractorBusyException("busy", "3", null));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(response.getHeaders().getFirst(HttpHeaders.RETRY_AFTER)).isEqualTo("3");
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().message()).isEqualTo("busy");
     }
 
     @Test

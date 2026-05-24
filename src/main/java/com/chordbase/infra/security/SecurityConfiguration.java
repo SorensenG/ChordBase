@@ -2,6 +2,7 @@ package com.chordbase.infra.security;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -21,6 +22,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 @Configuration
@@ -31,10 +33,11 @@ public class SecurityConfiguration {
             "http://localhost:*",
             "http://127.0.0.1:*",
             "http://192.168.15.5:*",
-            "https://chordbase-front.vercel.app",
-            "https://chordbase-front-*.vercel.app",
-            "https://*.trycloudflare.com"
+            "https://chordbase-front.vercel.app"
     );
+
+    @Value("${security.cors.extra-allowed-origin:}")
+    private String extraAllowedOrigin;
 
     public static final String[] ENDPOINTS_WITH_AUTHENTICATION_NOT_REQUIRED = {"/users/login",
             "/users/google",
@@ -80,7 +83,11 @@ public class SecurityConfiguration {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(ALLOWED_ORIGIN_PATTERNS);
+        List<String> allowedOriginPatterns = new ArrayList<>(ALLOWED_ORIGIN_PATTERNS);
+        if (extraAllowedOrigin != null && !extraAllowedOrigin.isBlank() && !extraAllowedOrigin.contains("*")) {
+            allowedOriginPatterns.add(extraAllowedOrigin.trim());
+        }
+        configuration.setAllowedOriginPatterns(allowedOriginPatterns);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"));
         configuration.setAllowCredentials(true);
@@ -124,8 +131,7 @@ public class SecurityConfiguration {
         return origin.matches("http://localhost:\\d+") ||
                 origin.matches("http://127\\.0\\.0\\.1:\\d+") ||
                 origin.matches("http://192\\.168\\.15\\.5:\\d+") ||
-                origin.matches("(?i)https://chordbase-front(?:-[a-z0-9-]+)*\\.vercel\\.app") ||
-                origin.matches("(?i)https://[a-z0-9-]+\\.trycloudflare\\.com(:\\d+)?");
+                origin.equalsIgnoreCase("https://chordbase-front.vercel.app");
     }
 
     private String escapeJson(String value) {

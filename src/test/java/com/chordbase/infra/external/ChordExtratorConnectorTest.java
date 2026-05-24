@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ChordExtratorConnectorTest {
@@ -71,6 +72,48 @@ class ChordExtratorConnectorTest {
             assertEquals("OCR_PDF", response.sourceType());
             assertTrue(contentType.get().startsWith("multipart/form-data;boundary="));
             assertTrue(requestBody.get().contains("filename=\"cifra.pdf\""));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void preservesExtractorBusyResponseForApiLayer() throws IOException {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/api/v1/extractions/chordpro", exchange -> {
+            byte[] response = """
+                    {
+                      "code": "OCR_BUSY",
+                      "message": "O processamento de documentos está ocupado. Tente novamente em instantes."
+                    }
+                    """.getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.getResponseHeaders().add("Retry-After", "2");
+            exchange.sendResponseHeaders(503, response.length);
+            exchange.getResponseBody().write(response);
+            exchange.close();
+        });
+        server.start();
+
+        try {
+            ChordExtratorConnector connector = new ChordExtratorConnector(
+                    RestClient.builder(),
+                    "http://127.0.0.1:" + server.getAddress().getPort(),
+                    "/api/v1/extractions/chordpro"
+            );
+            MockMultipartFile file = new MockMultipartFile(
+                    "file",
+                    "cifra.pdf",
+                    "application/pdf",
+                    new byte[]{1, 2, 3}
+            );
+
+            ExtractorBusyException exception = assertThrows(
+                    ExtractorBusyException.class,
+                    () -> connector.extractChordPro(file)
+            );
+            assertEquals("2", exception.getRetryAfter());
+            assertTrue(exception.getMessage().contains("processamento de documentos"));
         } finally {
             server.stop(0);
         }

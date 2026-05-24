@@ -15,6 +15,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @Query("select u from User u where u.email.value = :email")
     Optional<User> findByEmail(String email);
 
+    Optional<User> findByGoogleSubject(String googleSubject);
+
     @Query("select u from User u order by u.userName.value asc")
     List<User> findAllByOrderByUserNameAsc();
 

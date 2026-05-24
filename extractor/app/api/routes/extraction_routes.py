@@ -27,6 +27,9 @@ from app.presentation.schemas.extraction_response import ExtractionResponse
 router = APIRouter()
 logger = logging.getLogger(__name__)
 extraction_semaphore = asyncio.Semaphore(settings.ocr_max_concurrent_jobs)
+admission_semaphore = asyncio.Semaphore(
+    settings.ocr_max_concurrent_jobs + settings.ocr_max_pending_jobs
+)
 
 
 @router.post("/chordpro", response_model=ExtractionResponse)
@@ -40,6 +43,7 @@ async def extract_chordpro(
 
     temp_path: Optional[str] = None
 
+    await acquire_extraction_slot(request_id=request_id, mime_type=file.content_type)
     try:
         temp_file = await save_upload_to_temp_file(
             file=file,
@@ -47,13 +51,13 @@ async def extract_chordpro(
         )
         temp_path = temp_file.path
 
-        result = await run_extraction_with_resource_limit(
-            service=service,
-            file_path=temp_file.path,
-            filename=file.filename,
-            mime_type=file.content_type,
-            file_size_bytes=temp_file.size_bytes,
-            request_id=request_id,
+        result = await asyncio.to_thread(
+            service.extract,
+            temp_file.path,
+            file.filename,
+            file.content_type,
+            temp_file.size_bytes,
+            request_id,
         )
 
         logger.info(
@@ -72,6 +76,7 @@ async def extract_chordpro(
     finally:
         if temp_path:
             remove_temp_file(temp_path)
+        release_extraction_slot()
 
 
 async def run_extraction_with_resource_limit(
@@ -82,34 +87,7 @@ async def run_extraction_with_resource_limit(
     file_size_bytes: int,
     request_id: str,
 ) -> ExtractionResult:
-    if (mime_type or "").lower() == "text/plain":
-        return await asyncio.to_thread(
-            service.extract,
-            file_path,
-            filename,
-            mime_type,
-            file_size_bytes,
-            request_id,
-        )
-
-    waiting_started = perf_counter()
-    try:
-        await asyncio.wait_for(
-            extraction_semaphore.acquire(),
-            timeout=settings.ocr_queue_timeout_seconds,
-        )
-    except asyncio.TimeoutError as exception:
-        logger.warning(
-            "Extraction queue timed out",
-            extra={"request_id": request_id, "mime_type": mime_type},
-        )
-        raise ExtractionBusyException() from exception
-
-    wait_ms = round((perf_counter() - waiting_started) * 1000)
-    logger.info(
-        "Extraction slot acquired",
-        extra={"request_id": request_id, "mime_type": mime_type, "queue_wait_ms": wait_ms},
-    )
+    await acquire_extraction_slot(request_id=request_id, mime_type=mime_type)
     try:
         return await asyncio.to_thread(
             service.extract,
@@ -120,7 +98,46 @@ async def run_extraction_with_resource_limit(
             request_id,
         )
     finally:
-        extraction_semaphore.release()
+        release_extraction_slot()
+
+
+async def acquire_extraction_slot(request_id: str, mime_type: Optional[str]) -> None:
+    waiting_started = perf_counter()
+    try:
+        await asyncio.wait_for(
+            admission_semaphore.acquire(),
+            timeout=settings.ocr_admission_timeout_seconds,
+        )
+    except asyncio.TimeoutError as exception:
+        logger.warning(
+            "Extraction admission rejected",
+            extra={"request_id": request_id, "mime_type": mime_type},
+        )
+        raise ExtractionBusyException() from exception
+
+    try:
+        await asyncio.wait_for(
+            extraction_semaphore.acquire(),
+            timeout=settings.ocr_queue_timeout_seconds,
+        )
+    except asyncio.TimeoutError as exception:
+        logger.warning(
+            "Extraction queue timed out",
+            extra={"request_id": request_id, "mime_type": mime_type},
+        )
+        admission_semaphore.release()
+        raise ExtractionBusyException() from exception
+
+    wait_ms = round((perf_counter() - waiting_started) * 1000)
+    logger.info(
+        "Extraction slot acquired",
+        extra={"request_id": request_id, "mime_type": mime_type, "queue_wait_ms": wait_ms},
+    )
+
+
+def release_extraction_slot() -> None:
+    extraction_semaphore.release()
+    admission_semaphore.release()
 
 
 def validate_upload_metadata(file: UploadFile) -> None:

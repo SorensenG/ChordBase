@@ -9,7 +9,7 @@ from typing import Optional
 from app.config import settings
 from app.domain.enums.extraction_status import ExtractionStatus
 from app.domain.enums.source_type import SourceType
-from app.domain.exceptions.extraction_exceptions import UnsupportedFileException
+from app.domain.exceptions.extraction_exceptions import ExtractionException, UnsupportedFileException
 from app.domain.models.extracted_token import ExtractedToken
 from app.domain.models.extraction_result import ExtractionMetadata, ExtractionResult
 from app.infrastructure.chordpro.chordpro_converter import convert_lines_to_chordpro
@@ -67,6 +67,11 @@ class ChordproExtractionService:
             warnings.append(DIAGRAM_REMOVED_WARNING)
 
         chordpro = convert_lines_to_chordpro(lines)
+        if len(chordpro.encode("utf-8")) > settings.max_chordpro_output_bytes:
+            raise ExtractionException(
+                message="A saída extraída excede o limite seguro.",
+                code="EXTRACTION_OUTPUT_TOO_LARGE",
+            )
 
         confidence = self._calculate_confidence(tokens, extraction.source_type, chordpro)
 

@@ -36,6 +36,9 @@ public class User {
     @Column(columnDefinition = "text")
     private String description;
 
+    @Column(name = "google_subject", unique = true)
+    private String googleSubject;
+
     @Column(nullable = false)
     @Builder.Default
     private Boolean active = true;
@@ -79,6 +82,10 @@ public class User {
 
     public String getDescription() {
         return description;
+    }
+
+    public String getGoogleSubject() {
+        return googleSubject;
     }
 
     public Boolean getActive() {

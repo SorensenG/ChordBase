@@ -14,10 +14,12 @@ import com.chordbase.presentation.Dtos.Chord.SimpleChordVizualizationResponse;
 import com.chordbase.presentation.Dtos.Chord.FullChrodVizualizationResponse;
 import com.chordbase.presentation.Dtos.Chord.ConfirmChordRequest;
 import com.chordbase.presentation.Dtos.Chord.CreateChordResponse;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -154,6 +156,10 @@ public class ChordService {
     public FullChrodVizualizationResponse getChord(UUID chordUuid, User user) {
 
         Chord chord = findChordByUuid(chordUuid);
+
+        if ("DELETED".equals(chord.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Chord not found");
+        }
 
         if (ChordStatus.DRAFT.name().equals(chord.getStatus())) {
             chordOwnershipPolicy.validateOwner(chord, user);
