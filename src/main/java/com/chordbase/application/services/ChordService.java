@@ -122,7 +122,6 @@ public class ChordService {
         chord.setName(request.chordName());
         chord.setArtist(chordMetadataResolver.fallbackArtist(request.artist()));
         chord.setChordPro(request.chordPro());
-        chord.setStatus(ChordStatus.PUBLISHED.name());
 
         Chord saved = chordRepository.save(chord);
 
@@ -131,7 +130,8 @@ public class ChordService {
                 saved.getName(),
                 chordMetadataResolver.fallbackArtist(saved.getArtist()),
                 saved.getChordPro(),
-                saved.getAddByUser()
+                saved.getAddByUser(),
+                saved.getStatus()
         );
     }
 
@@ -170,7 +170,8 @@ public class ChordService {
                 chord.getName(),
                 chordMetadataResolver.fallbackArtist(chord.getArtist()),
                 chord.getChordPro(),
-                chord.getAddByUser()
+                chord.getAddByUser(),
+                chord.getStatus()
         );
 
     }

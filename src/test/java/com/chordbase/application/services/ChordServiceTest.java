@@ -5,10 +5,12 @@ import com.chordbase.application.hellpers.ChordOwnershipPolicy;
 import com.chordbase.domain.entities.Chord;
 import com.chordbase.domain.entities.User;
 import com.chordbase.domain.repository.ChordRepository;
+import com.chordbase.domain.valueobjects.ChordStatus;
 import com.chordbase.domain.valueobjects.EmailAddress;
 import com.chordbase.domain.valueobjects.UserName;
 import com.chordbase.infra.external.ExternalExtrator;
 import com.chordbase.presentation.Dtos.Chord.ChordExtractionResponse;
+import com.chordbase.presentation.Dtos.Chord.ConfirmChordRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
@@ -140,6 +142,65 @@ class ChordServiceTest {
         List<?> result = chordService(file -> null).findChord("vento", authenticatedUser);
 
         assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void updateChordKeepsDraftStatus() {
+        User owner = user("owner@example.com", "owner");
+        Chord draft = storeChord("Rascunho", ChordStatus.DRAFT.name(), owner);
+        ChordService service = chordService(file -> null);
+
+        var response = service.updateChord(
+                draft.getUuid(),
+                new ConfirmChordRequest("Rascunho editado", "Artista", "[C]Linha"),
+                owner
+        );
+
+        assertEquals(ChordStatus.DRAFT.name(), chords.get(draft.getUuid()).getStatus());
+        assertEquals(ChordStatus.DRAFT.name(), response.status());
+        assertEquals("Rascunho editado", response.chordName());
+    }
+
+    @Test
+    void updateChordKeepsPublishedStatus() {
+        User owner = user("owner@example.com", "owner");
+        Chord published = storeChord("Publicada", ChordStatus.PUBLISHED.name(), owner);
+        ChordService service = chordService(file -> null);
+
+        var response = service.updateChord(
+                published.getUuid(),
+                new ConfirmChordRequest("Publicada editada", "Artista", "[G]Linha"),
+                owner
+        );
+
+        assertEquals(ChordStatus.PUBLISHED.name(), chords.get(published.getUuid()).getStatus());
+        assertEquals(ChordStatus.PUBLISHED.name(), response.status());
+    }
+
+    @Test
+    void confirmChordPublishesDraft() {
+        User owner = user("owner@example.com", "owner");
+        Chord draft = storeChord("Rascunho", ChordStatus.DRAFT.name(), owner);
+        ChordService service = chordService(file -> null);
+
+        service.confirmChord(
+                draft.getUuid(),
+                new ConfirmChordRequest("Cifra final", "Artista", "[D]Linha"),
+                owner
+        );
+
+        assertEquals(ChordStatus.PUBLISHED.name(), chords.get(draft.getUuid()).getStatus());
+    }
+
+    @Test
+    void getChordReturnsStatus() {
+        User owner = user("owner@example.com", "owner");
+        Chord draft = storeChord("Rascunho", ChordStatus.DRAFT.name(), owner);
+        ChordService service = chordService(file -> null);
+
+        var response = service.getChord(draft.getUuid(), owner);
+
+        assertEquals(ChordStatus.DRAFT.name(), response.status());
     }
 
     @Test
